@@ -1,0 +1,1288 @@
+{
+  "categories": [
+    {
+      "id": "c1",
+      "name": "Lounge sets",
+      "slug": "lounge-sets",
+      "description": "Matching sets for slow mornings, errands and everything in between.",
+      "image": "colour-block-short-set-1",
+      "sortOrder": 1
+    },
+    {
+      "id": "c2",
+      "name": "Tracksuits",
+      "slug": "tracksuits",
+      "description": "Effortless comfort. Elevated everyday dressing.",
+      "image": "green-tracksuit-1",
+      "sortOrder": 2
+    },
+    {
+      "id": "c3",
+      "name": "Jackets",
+      "slug": "jackets",
+      "description": "Statement bombers, retro track jackets and made-to-order puff jackets.",
+      "image": "arsenal-retro-jacket-1",
+      "sortOrder": 3
+    },
+    {
+      "id": "c4",
+      "name": "Sweatshirts & tops",
+      "slug": "sweatshirts",
+      "description": "Fleece sweatshirts, hoodies and jerseys.",
+      "image": "argentina-hoodie-1",
+      "sortOrder": 4
+    }
+  ],
+  "collections": [
+    {
+      "id": "k1",
+      "name": "Kenya collection",
+      "slug": "kenya",
+      "description": "Wear your roots.",
+      "image": "kenya-bomber-jacket-1"
+    },
+    {
+      "id": "k2",
+      "name": "Matchday",
+      "slug": "matchday",
+      "description": "Football-inspired pieces made for everyday wear.",
+      "image": "arsenal-retro-jacket-2"
+    },
+    {
+      "id": "k3",
+      "name": "His & Hers",
+      "slug": "his-and-hers",
+      "description": "Style has no gender, and neither does comfort.",
+      "image": "colour-block-short-set-2"
+    }
+  ],
+  "products": [
+    {
+      "id": "p01",
+      "slug": "kenya-bomber-jacket",
+      "name": "Kenya Bomber Jacket",
+      "nameConfirmed": true,
+      "category": "jackets",
+      "collections": [
+        "kenya"
+      ],
+      "description": "A statement bomber inspired by home. Bold, effortless and unmistakably Snug & Co., made to bring Kenyan pride into your everyday wardrobe.",
+      "priceKES": null,
+      "compareAtPriceKES": null,
+      "images": [
+        {
+          "id": "kenya-bomber-jacket-1",
+          "alt": "Woman in sunglasses wearing the red, green and black Kenya bomber jacket with jeans in a garden"
+        },
+        {
+          "id": "kenya-bomber-jacket-2",
+          "alt": "Kenya bomber jacket styled with blue jeans, photographed indoors"
+        },
+        {
+          "id": "kenya-bomber-jacket-3",
+          "alt": "Close-up of the Kenya bomber jacket showing the flag badge and snap buttons"
+        }
+      ],
+      "colors": null,
+      "sizes": null,
+      "options": [],
+      "details": [
+        "Kenya-inspired colour blocking",
+        "Snap-button front",
+        "Ribbed collar, cuffs and hem"
+      ],
+      "material": null,
+      "care": null,
+      "tags": [
+        "kenya",
+        "bomber",
+        "jacket",
+        "flag",
+        "red",
+        "green",
+        "black",
+        "wear your roots"
+      ],
+      "availability": "available",
+      "madeToOrder": false,
+      "badge": "new",
+      "featured": true,
+      "newArrival": true,
+      "recency": 1,
+      "sortOrder": 1,
+      "sourcePost": "https://www.instagram.com/reel/DdoeupyqiUQ/"
+    },
+    {
+      "id": "p02",
+      "slug": "kenya-cosy-jersey",
+      "name": "Kenya Cosy Jersey",
+      "nameConfirmed": true,
+      "category": "sweatshirts",
+      "collections": [
+        "kenya"
+      ],
+      "description": "Wrapped in home. A unisex jersey in soft, warm cotton fleece, made for effortless everyday comfort and Kenyan pride, the Snug & Co. way.",
+      "priceKES": null,
+      "compareAtPriceKES": null,
+      "images": [
+        {
+          "id": "kenya-cosy-jersey-1",
+          "alt": "Woman wearing the black, red and green Kenya 00 jersey on a staircase"
+        },
+        {
+          "id": "kenya-cosy-jersey-2",
+          "alt": "Kenya Cosy Jersey worn as an oversized dress with white trainers outdoors"
+        },
+        {
+          "id": "kenya-cosy-jersey-3",
+          "alt": "Full-length view of the Kenya Cosy Jersey on a paved courtyard"
+        },
+        {
+          "id": "kenya-cosy-jersey-4",
+          "alt": "Close-up of the Kenya jersey number print and flag detail"
+        }
+      ],
+      "colors": null,
+      "sizes": null,
+      "sizesNote": "Made on order for all sizes. Tell us your size on WhatsApp.",
+      "options": [],
+      "details": [
+        "Unisex fit",
+        "Kenya 00 print"
+      ],
+      "material": "100% pure cotton fleece",
+      "care": null,
+      "tags": [
+        "kenya",
+        "jersey",
+        "football",
+        "unisex",
+        "fleece",
+        "wear your roots"
+      ],
+      "availability": "available",
+      "madeToOrder": true,
+      "badge": "new",
+      "featured": true,
+      "newArrival": true,
+      "recency": 2,
+      "sortOrder": 2,
+      "sourcePost": "https://www.instagram.com/reel/DdmQholuF1l/"
+    },
+    {
+      "id": "p03",
+      "slug": "tropical-vibes-short-set",
+      "name": "Tropical Vibes Short Set",
+      "nameConfirmed": true,
+      "category": "lounge-sets",
+      "collections": [],
+      "description": "Lightweight, easy and effortlessly polished. Made for warm days, slow moments and wherever the mood takes you. Comfort, with a little getaway energy.",
+      "priceKES": 4500,
+      "compareAtPriceKES": null,
+      "images": [
+        {
+          "id": "tropical-vibes-short-set-1",
+          "alt": "Man wearing the beige palm-print shirt and shorts set over a white tee"
+        }
+      ],
+      "colors": null,
+      "sizes": null,
+      "options": [],
+      "details": [
+        "Limited edition",
+        "Matching shirt and shorts",
+        "Palm leaf print"
+      ],
+      "material": null,
+      "care": null,
+      "tags": [
+        "tropical",
+        "print",
+        "shirt",
+        "shorts",
+        "resort",
+        "summer",
+        "men",
+        "matching set"
+      ],
+      "availability": "available",
+      "madeToOrder": false,
+      "badge": "limited",
+      "featured": false,
+      "newArrival": true,
+      "recency": 3,
+      "sortOrder": 3,
+      "sourcePost": "https://www.instagram.com/reel/DdWDOx-q3Iw/"
+    },
+    {
+      "id": "p04",
+      "slug": "striped-short-set",
+      "name": "Striped Short Set",
+      "nameConfirmed": true,
+      "category": "lounge-sets",
+      "collections": [],
+      "description": "Comfort, tailored for him. Made for slow mornings, relaxed evenings and everything in between. Soft, effortless and quietly elevated.",
+      "priceKES": 4500,
+      "compareAtPriceKES": null,
+      "images": [
+        {
+          "id": "striped-short-set-1",
+          "alt": "Man wearing the white pinstripe tee and shorts set in front of an arched mirror"
+        },
+        {
+          "id": "striped-short-set-2",
+          "alt": "Snug & Co. product card for the striped short set showing the crew neck, drawstring and pockets"
+        }
+      ],
+      "colors": null,
+      "sizes": null,
+      "options": [],
+      "details": [
+        "Limited edition",
+        "Classic crew neck",
+        "Adjustable drawstring waistband",
+        "Functional side pockets",
+        "Soft, breathable fabric"
+      ],
+      "material": null,
+      "care": null,
+      "tags": [
+        "stripes",
+        "pinstripe",
+        "shorts",
+        "loungewear",
+        "men",
+        "matching set"
+      ],
+      "availability": "available",
+      "madeToOrder": false,
+      "badge": "limited",
+      "featured": true,
+      "newArrival": true,
+      "recency": 4,
+      "sortOrder": 4,
+      "sourcePost": "https://www.instagram.com/reel/DdV9Q8qOd95/"
+    },
+    {
+      "id": "p05",
+      "slug": "the-black-tracksuit",
+      "name": "The Black Tracksuit",
+      "nameConfirmed": true,
+      "category": "tracksuits",
+      "collections": [],
+      "description": "Sleek, comfortable and designed for everyday luxury. From laid-back days to elevated street style, this is your new wardrobe essential. Comfort, styled with intention.",
+      "priceKES": null,
+      "compareAtPriceKES": null,
+      "images": [
+        {
+          "id": "the-black-tracksuit-1",
+          "alt": "Woman seated on a sofa in the black tracksuit with white side stripes"
+        },
+        {
+          "id": "the-black-tracksuit-2",
+          "alt": "Back view of the black tracksuit on a spiral staircase"
+        },
+        {
+          "id": "the-black-tracksuit-3",
+          "alt": "The black tracksuit styled with a crossbody bag"
+        }
+      ],
+      "colors": null,
+      "sizes": null,
+      "options": [],
+      "details": [
+        "Premium zipper",
+        "Signature stripes",
+        "Adjustable waist",
+        "Breathable fabric"
+      ],
+      "material": null,
+      "care": null,
+      "tags": [
+        "black",
+        "tracksuit",
+        "stripes",
+        "zip",
+        "essential"
+      ],
+      "availability": "available",
+      "madeToOrder": false,
+      "badge": "new",
+      "featured": true,
+      "newArrival": true,
+      "recency": 5,
+      "sortOrder": 5,
+      "sourcePost": "https://www.instagram.com/p/DdPORkEOSbV/"
+    },
+    {
+      "id": "p06",
+      "slug": "all-white-cosy-set",
+      "name": "All-White Cosy Set",
+      "nameConfirmed": true,
+      "category": "lounge-sets",
+      "collections": [],
+      "description": "Soft, effortless and made for the moments you want to feel good in. Our all-white cosy set is where comfort meets quiet luxury.",
+      "priceKES": null,
+      "compareAtPriceKES": null,
+      "images": [
+        {
+          "id": "all-white-cosy-set-1",
+          "alt": "Mirror selfie in the all-white sweatshirt and joggers set"
+        }
+      ],
+      "colors": null,
+      "sizes": null,
+      "options": [],
+      "details": [
+        "Sweatshirt and joggers"
+      ],
+      "material": null,
+      "care": null,
+      "tags": [
+        "white",
+        "cosy",
+        "sweatshirt",
+        "joggers",
+        "matching set"
+      ],
+      "availability": "available",
+      "madeToOrder": false,
+      "badge": "new",
+      "featured": false,
+      "newArrival": true,
+      "recency": 6,
+      "sortOrder": 6,
+      "sourcePost": "https://www.instagram.com/p/DdJ0W8kCuRB/"
+    },
+    {
+      "id": "p07",
+      "slug": "unisex-black-and-white-set",
+      "name": "Unisex Black & White Set",
+      "nameConfirmed": true,
+      "category": "lounge-sets",
+      "collections": [
+        "his-and-hers"
+      ],
+      "description": "Comfort meets effortless style. Designed with a relaxed fit for everyone, for days on the go, laid-back weekends or simply showing up in style. Nothing loud, everything intentional.",
+      "priceKES": null,
+      "compareAtPriceKES": null,
+      "images": [
+        {
+          "id": "black-and-white-set-1",
+          "alt": "Man in the diagonal black and white sweatshirt and split-colour trousers in a studio"
+        },
+        {
+          "id": "black-and-white-set-2",
+          "alt": "Black and white set worn with white socks, full-length studio shot"
+        },
+        {
+          "id": "black-and-white-set-3",
+          "alt": "Reverse colourway view of the black and white set"
+        },
+        {
+          "id": "black-and-white-set-4",
+          "alt": "Model mid-movement wearing the black and white set"
+        }
+      ],
+      "colors": null,
+      "sizes": null,
+      "options": [],
+      "details": [
+        "Unisex, relaxed fit",
+        "Colour-block sweatshirt and trousers",
+        "Pintuck trouser seams"
+      ],
+      "material": null,
+      "care": null,
+      "tags": [
+        "black",
+        "white",
+        "monochrome",
+        "unisex",
+        "sweatshirt",
+        "trousers",
+        "matching set"
+      ],
+      "availability": "available",
+      "madeToOrder": false,
+      "badge": null,
+      "featured": true,
+      "newArrival": false,
+      "recency": 7,
+      "sortOrder": 7,
+      "sourcePost": "https://www.instagram.com/p/DasRT2AOrMF/"
+    },
+    {
+      "id": "p08",
+      "slug": "colour-block-short-set",
+      "name": "Colour-Block Short Set",
+      "nameConfirmed": false,
+      "category": "lounge-sets",
+      "collections": [
+        "his-and-hers"
+      ],
+      "description": "Oversized. Comfortable. Clean. The set that looks expensive and feels comfortable, because looking good shouldn’t mean sacrificing comfort.",
+      "priceKES": null,
+      "compareAtPriceKES": null,
+      "images": [
+        {
+          "id": "colour-block-short-set-1",
+          "alt": "Woman in the brown and cream oversized tee and shorts set with sunglasses"
+        },
+        {
+          "id": "colour-block-short-set-2",
+          "alt": "Couple in the brown and cream short set and a black set, studio shot"
+        },
+        {
+          "id": "colour-block-short-set-3",
+          "alt": "Brown and cream short set walking alongside the black trouser set"
+        }
+      ],
+      "colors": [
+        {
+          "name": "Brown & cream",
+          "swatch": [
+            "#4B3328",
+            "#EDE3D0"
+          ]
+        },
+        {
+          "name": "Black & white",
+          "swatch": [
+            "#111111",
+            "#FFFFFF"
+          ]
+        },
+        {
+          "name": "Navy & white",
+          "swatch": [
+            "#1F2A44",
+            "#FFFFFF"
+          ]
+        }
+      ],
+      "sizes": null,
+      "options": [],
+      "details": [
+        "Oversized fit",
+        "Curved colour-block panels",
+        "Drawstring shorts"
+      ],
+      "material": null,
+      "care": null,
+      "tags": [
+        "brown",
+        "cream",
+        "navy",
+        "black",
+        "white",
+        "shorts",
+        "oversized",
+        "his and hers",
+        "matching set"
+      ],
+      "availability": "available",
+      "madeToOrder": false,
+      "badge": null,
+      "featured": true,
+      "newArrival": false,
+      "recency": 8,
+      "sortOrder": 8,
+      "sourcePost": "https://www.instagram.com/p/DaQlJbNKGAN/"
+    },
+    {
+      "id": "p09",
+      "slug": "pastel-green-set",
+      "name": "Pastel Green Set",
+      "nameConfirmed": true,
+      "category": "lounge-sets",
+      "collections": [],
+      "description": "Soft, fresh and effortlessly refined. Comfortable bottoms paired with a chic top for a polished everyday look. Also comes with a shorts option.",
+      "priceKES": null,
+      "compareAtPriceKES": null,
+      "images": [
+        {
+          "id": "pastel-green-set-1",
+          "alt": "Woman in the sage green sleeveless top and wide-leg trousers"
+        },
+        {
+          "id": "pastel-green-set-2",
+          "alt": "Side view of the pastel green set with sunglasses"
+        },
+        {
+          "id": "pastel-green-set-3",
+          "alt": "Pastel green set with the shorts option, mirror selfie"
+        }
+      ],
+      "colors": null,
+      "sizes": null,
+      "options": [
+        {
+          "name": "Style",
+          "values": [
+            "Pants",
+            "Shorts"
+          ],
+          "required": true
+        }
+      ],
+      "details": [
+        "Flattering fit",
+        "Soft, breathable comfort",
+        "Choose pants or shorts"
+      ],
+      "material": null,
+      "care": null,
+      "tags": [
+        "green",
+        "sage",
+        "pastel",
+        "sleeveless",
+        "shorts",
+        "pants",
+        "matching set"
+      ],
+      "availability": "available",
+      "madeToOrder": false,
+      "badge": null,
+      "featured": true,
+      "newArrival": false,
+      "recency": 9,
+      "sortOrder": 9,
+      "sourcePost": "https://www.instagram.com/reel/DbLBfZHKkzx/"
+    },
+    {
+      "id": "p10",
+      "slug": "off-shoulder-jogger-set",
+      "name": "Off-Shoulder Jogger Set",
+      "nameConfirmed": true,
+      "category": "lounge-sets",
+      "collections": [],
+      "description": "Cold weather, but make it cute. The perfect mix of cosy, comfy and effortlessly stylish. Your new cold-weather uniform.",
+      "priceKES": null,
+      "compareAtPriceKES": null,
+      "images": [
+        {
+          "id": "off-shoulder-jogger-set-1",
+          "alt": "Mirror selfie in the cream off-shoulder top and joggers"
+        }
+      ],
+      "colors": null,
+      "sizes": null,
+      "options": [],
+      "details": [
+        "Off-shoulder top",
+        "Joggers"
+      ],
+      "material": null,
+      "care": null,
+      "tags": [
+        "off-shoulder",
+        "joggers",
+        "cream",
+        "cosy",
+        "matching set"
+      ],
+      "availability": "available",
+      "madeToOrder": false,
+      "badge": null,
+      "featured": false,
+      "newArrival": false,
+      "recency": 10,
+      "sortOrder": 10,
+      "sourcePost": "https://www.instagram.com/reel/DcNzR6FOGPc/"
+    },
+    {
+      "id": "p11",
+      "slug": "beige-lounge-set",
+      "name": "Beige Lounge Set",
+      "nameConfirmed": false,
+      "category": "lounge-sets",
+      "collections": [],
+      "description": "Built for comfort, designed to stand out. Comfort is no longer the backup plan, it’s the main character.",
+      "priceKES": null,
+      "compareAtPriceKES": null,
+      "images": [
+        {
+          "id": "beige-lounge-set-1",
+          "alt": "Woman laughing in the beige half-zip top and wide-leg trousers"
+        },
+        {
+          "id": "beige-lounge-set-2",
+          "alt": "Beige lounge set, seated studio pose"
+        },
+        {
+          "id": "beige-lounge-set-3",
+          "alt": "Close-up of the pintuck seam on the beige wide-leg trousers"
+        }
+      ],
+      "colors": null,
+      "sizes": null,
+      "options": [],
+      "details": [
+        "Half-zip cropped top",
+        "Wide-leg trousers with pintuck seams"
+      ],
+      "material": null,
+      "care": null,
+      "tags": [
+        "beige",
+        "neutral",
+        "half-zip",
+        "wide-leg",
+        "matching set"
+      ],
+      "availability": "available",
+      "madeToOrder": false,
+      "badge": null,
+      "featured": false,
+      "newArrival": false,
+      "recency": 11,
+      "sortOrder": 11,
+      "sourcePost": "https://www.instagram.com/p/Dam5irNutna/"
+    },
+    {
+      "id": "p12",
+      "slug": "blue-sleeveless-set",
+      "name": "Blue Sleeveless Set",
+      "nameConfirmed": true,
+      "category": "lounge-sets",
+      "collections": [],
+      "description": "Blue essentials are in. Comfortable, stylish and perfect for everyday wear.",
+      "priceKES": null,
+      "compareAtPriceKES": null,
+      "images": [
+        {
+          "id": "blue-sleeveless-set-1",
+          "alt": "Woman in the royal blue sleeveless zip top and trousers with white piping"
+        },
+        {
+          "id": "blue-sleeveless-set-2",
+          "alt": "Blue sleeveless set styled next to the Argentina hoodie"
+        }
+      ],
+      "colors": null,
+      "sizes": null,
+      "options": [],
+      "details": [
+        "Sleeveless zip top",
+        "Trousers with contrast piping"
+      ],
+      "material": null,
+      "care": null,
+      "tags": [
+        "blue",
+        "sleeveless",
+        "zip",
+        "matching set"
+      ],
+      "availability": "available",
+      "madeToOrder": false,
+      "badge": null,
+      "featured": false,
+      "newArrival": false,
+      "recency": 12,
+      "sortOrder": 12,
+      "sourcePost": "https://www.instagram.com/p/DakANpBqpic/"
+    },
+    {
+      "id": "p13",
+      "slug": "zebra-print-set",
+      "name": "Zebra Print Set",
+      "nameConfirmed": true,
+      "category": "lounge-sets",
+      "collections": [],
+      "description": "A black-and-white zebra print set with flowy wide-leg pants and a lightweight fabric that moves with you. Made to stand out without trying too hard.",
+      "priceKES": null,
+      "compareAtPriceKES": null,
+      "images": [
+        {
+          "id": "zebra-print-set-1",
+          "alt": "Mirror selfie in the black and white zebra print top and wide-leg pants"
+        },
+        {
+          "id": "zebra-print-set-2",
+          "alt": "Zebra print set, full-length mirror view"
+        }
+      ],
+      "colors": null,
+      "sizes": null,
+      "options": [],
+      "details": [
+        "Flowy wide-leg pants",
+        "Lightweight fabric"
+      ],
+      "material": null,
+      "care": null,
+      "tags": [
+        "zebra",
+        "animal print",
+        "black",
+        "white",
+        "wide-leg",
+        "matching set"
+      ],
+      "availability": "available",
+      "madeToOrder": false,
+      "badge": null,
+      "featured": false,
+      "newArrival": false,
+      "recency": 13,
+      "sortOrder": 13,
+      "sourcePost": "https://www.instagram.com/reel/DZQlJZEO5wz/"
+    },
+    {
+      "id": "p14",
+      "slug": "snug-and-go-grey-set",
+      "name": "Snug & Go Grey Set",
+      "nameConfirmed": true,
+      "category": "lounge-sets",
+      "collections": [],
+      "description": "Soft enough to lounge in, clean enough to step out in. The Snug & Go grey set just gets it.",
+      "priceKES": null,
+      "compareAtPriceKES": null,
+      "images": [
+        {
+          "id": "snug-and-go-grey-set-1",
+          "alt": "Woman in the light grey zip hoodie and joggers set on a staircase"
+        }
+      ],
+      "colors": null,
+      "sizes": null,
+      "sizesNote": "Made on order for all sizes. Tell us your size on WhatsApp.",
+      "options": [],
+      "details": [
+        "Zip hoodie and joggers"
+      ],
+      "material": null,
+      "care": null,
+      "tags": [
+        "grey",
+        "hoodie",
+        "joggers",
+        "matching set"
+      ],
+      "availability": "available",
+      "madeToOrder": true,
+      "badge": null,
+      "featured": false,
+      "newArrival": false,
+      "recency": 14,
+      "sortOrder": 14,
+      "sourcePost": "https://www.instagram.com/reel/DYPlCU7q3ru/"
+    },
+    {
+      "id": "p15",
+      "slug": "green-tracksuit",
+      "name": "Green Tracksuit",
+      "nameConfirmed": false,
+      "category": "tracksuits",
+      "collections": [
+        "his-and-hers"
+      ],
+      "description": "Shades of green, for him or for her. Premium matching style without compromising on comfort.",
+      "priceKES": null,
+      "compareAtPriceKES": null,
+      "images": [
+        {
+          "id": "green-tracksuit-1",
+          "alt": "Couple in matching green tracksuits with white chest and leg stripes"
+        },
+        {
+          "id": "green-tracksuit-2",
+          "alt": "Woman in the bottle green tracksuit with a white stripe down the leg"
+        },
+        {
+          "id": "green-tracksuit-3",
+          "alt": "His and hers green tracksuits, studio shot"
+        }
+      ],
+      "colors": [
+        {
+          "name": "Bottle green",
+          "swatch": [
+            "#1F4A35"
+          ]
+        },
+        {
+          "name": "Teal green",
+          "swatch": [
+            "#2F5E57"
+          ]
+        }
+      ],
+      "sizes": null,
+      "options": [],
+      "details": [
+        "Zip-up track top",
+        "Wide-leg track pants",
+        "Contrast white stripes"
+      ],
+      "material": null,
+      "care": null,
+      "tags": [
+        "green",
+        "tracksuit",
+        "his and hers",
+        "stripes",
+        "zip"
+      ],
+      "availability": "available",
+      "madeToOrder": false,
+      "badge": null,
+      "featured": true,
+      "newArrival": false,
+      "recency": 15,
+      "sortOrder": 15,
+      "sourcePost": "https://www.instagram.com/p/Dadjn4NOHhb/"
+    },
+    {
+      "id": "p16",
+      "slug": "maroon-arsenal-retro-jacket",
+      "name": "Maroon Arsenal Retro Jacket",
+      "nameConfirmed": true,
+      "category": "jackets",
+      "collections": [
+        "matchday"
+      ],
+      "description": "Football-inspired fashion that’s stylish enough for every day. This maroon retro jacket isn’t just for the stadium, it’s made for your lifestyle.",
+      "priceKES": null,
+      "compareAtPriceKES": null,
+      "images": [
+        {
+          "id": "arsenal-retro-jacket-1",
+          "alt": "Man in the maroon retro track jacket with navy trim and white joggers"
+        },
+        {
+          "id": "arsenal-retro-jacket-2",
+          "alt": "Maroon retro jacket on a rooftop in Nairobi"
+        },
+        {
+          "id": "arsenal-retro-jacket-3",
+          "alt": "Close-up of the maroon retro jacket crest and stripes"
+        },
+        {
+          "id": "arsenal-retro-jacket-4",
+          "alt": "Maroon retro jacket, studio portrait"
+        }
+      ],
+      "colors": null,
+      "sizes": null,
+      "options": [],
+      "details": [
+        "Retro track jacket",
+        "Full zip",
+        "Contrast collar and cuffs"
+      ],
+      "material": null,
+      "care": null,
+      "tags": [
+        "arsenal",
+        "maroon",
+        "retro",
+        "football",
+        "gunners",
+        "track jacket",
+        "matchday"
+      ],
+      "availability": "available",
+      "madeToOrder": false,
+      "badge": null,
+      "featured": true,
+      "newArrival": false,
+      "recency": 16,
+      "sortOrder": 16,
+      "sourcePost": "https://www.instagram.com/p/DaQxekfObbU/"
+    },
+    {
+      "id": "p17",
+      "slug": "arsenal-champions-sweatshirt",
+      "name": "Arsenal Champions Sweatshirt",
+      "nameConfirmed": true,
+      "category": "sweatshirts",
+      "collections": [
+        "matchday"
+      ],
+      "description": "New season, same ambition. A maroon half-zip for Gunners, because the new season deserves a winner’s fit.",
+      "priceKES": null,
+      "compareAtPriceKES": null,
+      "images": [
+        {
+          "id": "arsenal-champions-sweatshirt-1",
+          "alt": "Man in the maroon half-zip sweatshirt with white sleeves at a café table"
+        },
+        {
+          "id": "arsenal-champions-sweatshirt-2",
+          "alt": "Close-up of the Premier League Champions embroidery on the maroon sweatshirt"
+        },
+        {
+          "id": "arsenal-champions-sweatshirt-3",
+          "alt": "Mirror selfie in the Arsenal Champions sweatshirt"
+        }
+      ],
+      "colors": null,
+      "sizes": null,
+      "options": [],
+      "details": [
+        "Half-zip collar",
+        "Contrast sleeves",
+        "Embroidered chest detail"
+      ],
+      "material": null,
+      "care": null,
+      "tags": [
+        "arsenal",
+        "champions",
+        "maroon",
+        "half-zip",
+        "football",
+        "gunners",
+        "matchday"
+      ],
+      "availability": "available",
+      "madeToOrder": false,
+      "badge": null,
+      "featured": false,
+      "newArrival": false,
+      "recency": 17,
+      "sortOrder": 17,
+      "sourcePost": "https://www.instagram.com/reel/DcTlL9YqYyp/"
+    },
+    {
+      "id": "p18",
+      "slug": "arsenal-matchday-sweatshirt",
+      "name": "Arsenal Matchday Sweatshirt",
+      "nameConfirmed": true,
+      "category": "sweatshirts",
+      "collections": [
+        "matchday"
+      ],
+      "description": "Bold, effortless and made for the Gunners who like their football fits as good as their football. Red. White. Matchday ready.",
+      "priceKES": null,
+      "compareAtPriceKES": null,
+      "images": [
+        {
+          "id": "arsenal-matchday-sweatshirt-1",
+          "alt": "Woman in the red and white matchday sweatshirt with jeans"
+        },
+        {
+          "id": "arsenal-matchday-sweatshirt-2",
+          "alt": "Mirror selfie in the red matchday sweatshirt"
+        },
+        {
+          "id": "arsenal-matchday-sweatshirt-3",
+          "alt": "Red matchday sweatshirt styled with navy joggers"
+        }
+      ],
+      "colors": null,
+      "sizes": null,
+      "options": [],
+      "details": [
+        "Contrast white sleeves",
+        "Relaxed fit"
+      ],
+      "material": null,
+      "care": null,
+      "tags": [
+        "arsenal",
+        "red",
+        "white",
+        "football",
+        "gunners",
+        "sweatshirt",
+        "matchday"
+      ],
+      "availability": "available",
+      "madeToOrder": false,
+      "badge": null,
+      "featured": false,
+      "newArrival": false,
+      "recency": 18,
+      "sortOrder": 18,
+      "sourcePost": "https://www.instagram.com/reel/DdCYoiwuAmx/"
+    },
+    {
+      "id": "p19",
+      "slug": "arsenal-champions-hoodie",
+      "name": "Arsenal Champions Hoodie",
+      "nameConfirmed": true,
+      "category": "sweatshirts",
+      "collections": [
+        "matchday"
+      ],
+      "description": "For Gooners who want to stand out while celebrating a season we’ll never forget. Football fashion as bold as the team you support.",
+      "priceKES": null,
+      "compareAtPriceKES": null,
+      "images": [
+        {
+          "id": "arsenal-champions-hoodie-1",
+          "alt": "Man in the maroon and white champions hoodie at a café"
+        },
+        {
+          "id": "arsenal-champions-hoodie-2",
+          "alt": "Side view of the champions hoodie sleeve badge"
+        }
+      ],
+      "colors": null,
+      "sizes": null,
+      "options": [],
+      "details": [
+        "Contrast sleeves",
+        "Embroidered badges"
+      ],
+      "material": null,
+      "care": null,
+      "tags": [
+        "arsenal",
+        "champions",
+        "hoodie",
+        "maroon",
+        "football",
+        "gunners",
+        "matchday"
+      ],
+      "availability": "available",
+      "madeToOrder": false,
+      "badge": null,
+      "featured": false,
+      "newArrival": false,
+      "recency": 19,
+      "sortOrder": 19,
+      "sourcePost": "https://www.instagram.com/reel/DaIcfQLjQs5/"
+    },
+    {
+      "id": "p20",
+      "slug": "club-puff-jacket",
+      "name": "Club Puff Jacket",
+      "nameConfirmed": false,
+      "category": "jackets",
+      "collections": [
+        "matchday"
+      ],
+      "description": "For fans who want to wear their passion loud and proud. We make puff jackets for any Premier League club and any World Cup nation. Tell us your team and we’ll make one.",
+      "priceKES": 4500,
+      "compareAtPriceKES": null,
+      "images": [
+        {
+          "id": "club-puff-jacket-1",
+          "alt": "Black sleeveless puff jacket with red and green club details laid flat"
+        },
+        {
+          "id": "club-puff-jacket-2",
+          "alt": "Man wearing the black puff jacket over a white hoodie"
+        },
+        {
+          "id": "club-puff-jacket-3",
+          "alt": "Woman wearing the puff jacket over a red sweatshirt outdoors"
+        },
+        {
+          "id": "club-puff-jacket-4",
+          "alt": "Puff jacket being pressed in the Snug & Co. workroom"
+        }
+      ],
+      "colors": null,
+      "sizes": null,
+      "sizesNote": "Made on order for all sizes. Tell us your size on WhatsApp.",
+      "options": [
+        {
+          "name": "Club or country",
+          "type": "text",
+          "required": true,
+          "placeholder": "e.g. Arsenal, Argentina"
+        }
+      ],
+      "details": [
+        "Sleeveless puffer",
+        "Made for any Premier League club or World Cup nation"
+      ],
+      "material": null,
+      "care": null,
+      "tags": [
+        "puff jacket",
+        "puffer",
+        "gilet",
+        "vest",
+        "football",
+        "custom",
+        "world cup",
+        "premier league",
+        "matchday"
+      ],
+      "availability": "available",
+      "madeToOrder": true,
+      "badge": null,
+      "featured": true,
+      "newArrival": false,
+      "recency": 20,
+      "sortOrder": 20,
+      "sourcePost": "https://www.instagram.com/reel/DZvW3YFOOYI/"
+    },
+    {
+      "id": "p21",
+      "slug": "argentina-hoodie",
+      "name": "Argentina Hoodie",
+      "nameConfirmed": true,
+      "category": "sweatshirts",
+      "collections": [
+        "matchday"
+      ],
+      "description": "Argentina match day fit, sorted. Sky-blue and white stripes for the Albiceleste faithful.",
+      "priceKES": null,
+      "compareAtPriceKES": null,
+      "images": [
+        {
+          "id": "argentina-hoodie-1",
+          "alt": "Man in the sky-blue and white striped Argentina hoodie, studio shot"
+        },
+        {
+          "id": "argentina-hoodie-2",
+          "alt": "Mirror selfie in the Argentina hoodie"
+        },
+        {
+          "id": "argentina-hoodie-3",
+          "alt": "Close-up of the embroidered crest on the Argentina hoodie"
+        },
+        {
+          "id": "argentina-hoodie-4",
+          "alt": "Argentina hoodie worn with white joggers and a cap"
+        }
+      ],
+      "colors": null,
+      "sizes": null,
+      "options": [],
+      "details": [
+        "Striped half-zip hoodie",
+        "Embroidered crest"
+      ],
+      "material": null,
+      "care": null,
+      "tags": [
+        "argentina",
+        "hoodie",
+        "blue",
+        "white",
+        "world cup",
+        "messi",
+        "football",
+        "matchday"
+      ],
+      "availability": "available",
+      "madeToOrder": false,
+      "badge": null,
+      "featured": false,
+      "newArrival": false,
+      "recency": 21,
+      "sortOrder": 21,
+      "sourcePost": "https://www.instagram.com/p/DagIaZyO-nb/"
+    },
+    {
+      "id": "p22",
+      "slug": "argentina-jersey",
+      "name": "Argentina Jersey",
+      "nameConfirmed": false,
+      "category": "sweatshirts",
+      "collections": [
+        "matchday"
+      ],
+      "description": "Match day fit done right. Soft, warm and designed for all-day comfort. Perfect for lounging, layering and staying cosy this season.",
+      "priceKES": null,
+      "compareAtPriceKES": null,
+      "images": [
+        {
+          "id": "argentina-jersey-1",
+          "alt": "Woman in the striped Argentina number 10 jersey sweatshirt"
+        },
+        {
+          "id": "argentina-jersey-2",
+          "alt": "Close-up of the Argentina 10 print on the jersey"
+        }
+      ],
+      "colors": null,
+      "sizes": [
+        "S",
+        "M",
+        "L",
+        "XL",
+        "XXL"
+      ],
+      "options": [],
+      "details": [
+        "V-neck collar",
+        "Number 10 print"
+      ],
+      "material": "100% pure cotton fleece",
+      "care": null,
+      "tags": [
+        "argentina",
+        "jersey",
+        "blue",
+        "white",
+        "world cup",
+        "messi",
+        "football",
+        "fleece",
+        "matchday"
+      ],
+      "availability": "available",
+      "madeToOrder": false,
+      "badge": null,
+      "featured": false,
+      "newArrival": false,
+      "recency": 22,
+      "sortOrder": 22,
+      "sourcePost": "https://www.instagram.com/reel/Da3HV60KKV-/"
+    },
+    {
+      "id": "p23",
+      "slug": "manchester-united-retro-jacket",
+      "name": "Manchester United Retro Jacket",
+      "nameConfirmed": false,
+      "category": "jackets",
+      "collections": [
+        "matchday"
+      ],
+      "description": "Classic football, classic style. A red and black retro track jacket for the Red Devils.",
+      "priceKES": null,
+      "compareAtPriceKES": null,
+      "images": [
+        {
+          "id": "manchester-united-retro-jacket-1",
+          "alt": "Red and black retro track jacket on a hanger"
+        },
+        {
+          "id": "manchester-united-retro-jacket-2",
+          "alt": "Front view of the red retro jacket with crest"
+        }
+      ],
+      "colors": null,
+      "sizes": null,
+      "options": [],
+      "details": [
+        "Retro track jacket",
+        "Full zip",
+        "Contrast sleeve stripes"
+      ],
+      "material": null,
+      "care": null,
+      "tags": [
+        "manchester united",
+        "man u",
+        "red devils",
+        "red",
+        "black",
+        "retro",
+        "football",
+        "track jacket",
+        "matchday"
+      ],
+      "availability": "available",
+      "madeToOrder": false,
+      "badge": null,
+      "featured": false,
+      "newArrival": false,
+      "recency": 23,
+      "sortOrder": 23,
+      "sourcePost": "https://www.instagram.com/p/DYcpXBwCqLa/"
+    }
+  ]
+}
