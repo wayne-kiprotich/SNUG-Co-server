@@ -6,7 +6,7 @@ from werkzeug.security import check_password_hash, generate_password_hash
 from ..errors import ApiError, ValidationError
 from ..extensions import db
 from ..models import AdminUser
-from ..security import current_admin, login_required, login_throttle
+from ..security import current_admin, device_id, login_required, login_throttle, set_device_cookie, start_session
 
 bp = Blueprint("auth", __name__, url_prefix="/api/admin")
 
@@ -29,25 +29,35 @@ def login():
     password = body.get("password", "")
     cfg = current_app.config
     limit, window = cfg["LOGIN_MAX_ATTEMPTS"], cfg["LOGIN_WINDOW_SECONDS"]
-    key = (request.remote_addr, email)
-
-    if login_throttle.blocked(key, limit, window) or login_throttle.blocked((request.remote_addr, "*"), limit * 4, window):
+    # Behind a proxy (Vercel) many visitors share one address, so an attacker could use up
+    # the address's attempts and lock the owner out. A browser that has signed in before
+    # carries a signed device cookie and gets its own bucket, which an attacker can't share.
+    device = device_id()
+    if device:
+        keys = [("device", device, email)]
+    else:
+        keys = [(request.remote_addr, email)]
+        if login_throttle.blocked((request.remote_addr, "*"), limit * 4, window):
+            raise ApiError(429, "Too many attempts. Wait 15 minutes and try again.")
+    if any(login_throttle.blocked(k, limit, window) for k in keys):
         raise ApiError(429, "Too many attempts. Wait 15 minutes and try again.")
 
     user = AdminUser.query.filter_by(email=email).first() if email else None
     valid = check_password_hash(user.password_hash if user else _DUMMY_HASH, password if isinstance(password, str) else "")
     if not (user and valid):
-        login_throttle.fail(key, window)
-        login_throttle.fail((request.remote_addr, "*"), window)
+        for k in keys:
+            login_throttle.fail(k, window)
+        if not device:
+            login_throttle.fail((request.remote_addr, "*"), window)
         raise ApiError(401, "Email or password is incorrect.")
 
-    login_throttle.clear(key)
-    session.clear()
-    session["admin_id"] = user.id
-    session.permanent = True
+    for k in keys:
+        login_throttle.clear(k)
+    start_session(user)
     user.last_login_at = datetime.now(timezone.utc)
     db.session.commit()
-    return jsonify({"email": user.email})
+    response = jsonify({"email": user.email})
+    return response if device else set_device_cookie(response)
 
 
 @bp.post("/logout")
@@ -74,8 +84,7 @@ def change_password():
         raise ValidationError({"currentPassword": "That isn’t your current password."})
     check_new_password(body.get("newPassword"))
     g.admin.password_hash = generate_password_hash(body["newPassword"])
+    g.admin.session_version += 1  # signs out every other browser
     db.session.commit()
-    session.clear()
-    session["admin_id"] = g.admin.id
-    session.permanent = True
+    start_session(g.admin)
     return jsonify({"ok": True})

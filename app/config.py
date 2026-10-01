@@ -22,9 +22,9 @@ def build_config(overrides=None):
     upload_dir = env("UPLOAD_DIR") or str(BASE_DIR / "uploads")
 
     allowed_origins = [o.strip() for o in (env("ALLOWED_ORIGINS") or "").split(",") if o.strip()]
-    # The client is on its own domain when other origins are allowed, so the admin cookie
-    # must be sent cross-site. That needs SameSite=None, which browsers only honour over HTTPS.
-    cross_site = bool(allowed_origins)
+    # Lax unless the admin really is served from another site than this API (no proxy in
+    # between). Then set SESSION_COOKIE_SAMESITE=None, which browsers only accept over HTTPS.
+    samesite = env("SESSION_COOKIE_SAMESITE") or "Lax"
 
     supabase_url = env("SUPABASE_URL") or ""
     supabase_key = env("SUPABASE_SERVICE_KEY") or ""
@@ -44,14 +44,18 @@ def build_config(overrides=None):
         "SUPABASE_URL": supabase_url,
         "SUPABASE_SERVICE_KEY": supabase_key,
         "SUPABASE_BUCKET": supabase_bucket,
-        "MAX_CONTENT_LENGTH": 40 * 1024 * 1024,  # whole request; each photo is checked to 16 MB below
+        # Most requests are small JSON. Only photo uploads raise this (MAX_UPLOAD_REQUEST_BYTES).
+        "MAX_CONTENT_LENGTH": 64 * 1024,
+        "MAX_UPLOAD_REQUEST_BYTES": 40 * 1024 * 1024,
         "MAX_UPLOAD_BYTES": 16 * 1024 * 1024,
         "MAX_IMAGES_PER_PRODUCT": 12,
         "SESSION_COOKIE_NAME": "snug_admin",
         "SESSION_COOKIE_HTTPONLY": True,
-        "SESSION_COOKIE_SAMESITE": "None" if cross_site else "Lax",
-        "SESSION_COOKIE_SECURE": cross_site or not debug,
+        "SESSION_COOKIE_SAMESITE": samesite,
+        "SESSION_COOKIE_SECURE": samesite == "None" or not debug,
         "PERMANENT_SESSION_LIFETIME": timedelta(hours=8),
+        # Even an active session must sign in again after this.
+        "SESSION_MAX_AGE": timedelta(days=7),
         "ALLOWED_ORIGINS": allowed_origins,
         "TRUSTED_PROXIES": int(env("TRUSTED_PROXIES") or 0),
         "LOGIN_MAX_ATTEMPTS": 5,

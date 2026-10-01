@@ -168,6 +168,10 @@ class Cleaner:
             self.errors[key] = "Keep this under 300 characters."
             return
         if value.startswith("/"):
+            # "//evil.com" and "/\\evil.com" look internal but leave the site.
+            if value.startswith("//") or "\\" in value:
+                self.errors[key] = "Enter a page on this site (starting with /) or a full https:// address."
+                return
             self.out[key] = value
             return
         parsed = urlparse(value)

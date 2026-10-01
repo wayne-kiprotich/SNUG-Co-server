@@ -158,6 +158,7 @@ def register_cli(app):
         if len(password) < MIN_PASSWORD:
             raise click.ClickException(f"Use a password of at least {MIN_PASSWORD} characters.")
         user.password_hash = generate_password_hash(password)
+        user.session_version += 1
         db.session.commit()
         click.echo("Password updated.")
 

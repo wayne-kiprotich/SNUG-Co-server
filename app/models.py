@@ -22,6 +22,8 @@ class AdminUser(db.Model):
     password_hash = db.Column(db.String(255), nullable=False)
     created_at = db.Column(db.DateTime(timezone=True), default=_now, nullable=False)
     last_login_at = db.Column(db.DateTime(timezone=True))
+    # Bumped on password change; sessions carrying an older number stop working.
+    session_version = db.Column(db.Integer, default=0, nullable=False, server_default="0")
 
 
 class Category(db.Model):

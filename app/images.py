@@ -15,6 +15,9 @@ WIDTHS = (480, 800, 1080, 1600)
 RATIO = 4 / 5
 MIN_WIDTH = 600
 Image.MAX_IMAGE_PIXELS = 80_000_000
+# Decoded size limits, checked before decoding, so one photo can't use up the server's memory.
+MAX_PIXELS = 40_000_000  # PNG/WebP decode at full size
+MAX_JPEG_PIXELS = 120_000_000  # JPEG decodes at a reduced size via draft()
 
 
 def new_image_id():
@@ -24,13 +27,17 @@ def new_image_id():
 def process_image(data, focus_y=0.5):
     """Return (widths, {width: webp_bytes}) for an uploaded photo."""
     try:
-        img = Image.open(io.BytesIO(data))
+        img = Image.open(io.BytesIO(data), formats=sorted(ALLOWED_FORMATS))
         fmt = img.format
+        pixels = img.width * img.height
+        if pixels > (MAX_JPEG_PIXELS if fmt == "JPEG" else MAX_PIXELS):
+            raise ApiError(422, "That photo is too large. Use one under 40 megapixels.")
+        if fmt == "JPEG":
+            # Decode at the smallest scale that still covers the largest size we keep.
+            img.draft("RGB", (2000, 2000))
         img.load()
     except (UnidentifiedImageError, OSError, Image.DecompressionBombError, ValueError):
         raise ApiError(422, "That file isn’t a photo we can read. Use a JPEG, PNG or WebP image.")
-    if fmt not in ALLOWED_FORMATS:
-        raise ApiError(422, "Use a JPEG, PNG or WebP photo.")
 
     img = ImageOps.exif_transpose(img)
     if img.mode in ("RGBA", "LA", "P"):

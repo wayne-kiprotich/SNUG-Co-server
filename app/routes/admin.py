@@ -194,6 +194,7 @@ def move_product(product_id):
 
 @bp.post("/products/<int:product_id>/images")
 def upload_images(product_id):
+    request.max_content_length = current_app.config["MAX_UPLOAD_REQUEST_BYTES"]
     product = get_or_404(Product, product_id, "product")
     files = request.files.getlist("files")
     if not files:

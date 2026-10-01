@@ -77,9 +77,9 @@ Checklist:
 
 If the client is a separate app (its own repo, its own host — Vercel, Netlify, …) rather than built into this server's `CLIENT_DIST`, cookies and requests cross a domain boundary and need a bit more:
 
-- Set `ALLOWED_ORIGINS` to the client's exact origin(s), comma separated, e.g. `https://snugandco.vercel.app`. This switches the admin's sign-in cookie to `SameSite=None` (required for a cross-site cookie) and adds the CORS headers the browser needs.
-- Set the client's `VITE_API_URL` to this API's full address, e.g. `https://snug-co-server.onrender.com/api`.
-- Both origins must be HTTPS. A cross-site cookie needs `Secure`, which needs HTTPS — this isn't optional once `ALLOWED_ORIGINS` is set.
+- Recommended: let the client's host proxy `/api` and `/uploads` to this server (`client/vercel.json` does this) and build the client with `VITE_API_URL=/api`. The sign-in cookie is then first-party, so browsers that block third-party cookies (Safari, Brave) still work.
+- Set `ALLOWED_ORIGINS` to the client's exact origin(s), e.g. `https://snug-co-client.vercel.app`. The admin rejects change requests from any other origin, and CORS headers are sent only to these.
+- Only if the browser calls this API's own domain directly (no proxy): set `SESSION_COOKIE_SAMESITE=None` and `VITE_API_URL` to the full API address. Both sites must use HTTPS.
 - Photos need a store reachable by URL regardless of which host serves them — see Supabase Storage below. A local disk only serves photos on the same host that saved them.
 
 ## Storing photos: local disk or Supabase Storage
@@ -101,7 +101,9 @@ It uploads each bundled photo to the configured storage, and flips its database 
 ## Security notes
 
 - Passwords are hashed with scrypt. The same message and timing is used for a wrong email and a wrong password.
-- The session is a signed cookie (`HttpOnly`, 8 hours). `SameSite=Lax` normally; `SameSite=None` (needs HTTPS) when `ALLOWED_ORIGINS` is set, since the cookie then has to cross domains. It can't be revoked individually. Rotate `SECRET_KEY` to sign everyone out.
+- The session is a signed cookie (`HttpOnly`, `SameSite=Lax`, 8 hours idle, 7 days at most). Changing the password (in the admin or with `flask reset-password`) signs out every other browser. Rotate `SECRET_KEY` to sign everyone out.
+- Sign-in attempts are limited per browser: one that has signed in before carries a signed device cookie and has its own limit, so someone hammering the login from a shared proxy address can't lock the owner out.
+- Requests are capped at 64 KB, except photo uploads (40 MB). Photos over 40 megapixels (PNG/WebP) are rejected before decoding; large JPEGs are decoded at reduced size.
 - Every state-changing admin request must carry `X-Requested-With: snug-admin` and, when the browser sends one, a matching `Origin`. Other websites can't send that header.
 - Uploads are decoded and re-encoded with Pillow, so the file's real contents are checked and only WebP is written. Limits: JPEG, PNG or WebP, 600px wide or more, 16 MB each, 12 per product.
 - The public API only returns products marked visible.

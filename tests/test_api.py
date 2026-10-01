@@ -404,6 +404,7 @@ def test_cross_origin_admin_gets_cors_and_cross_site_cookie(tmp_path, monkeypatc
 
     site = "https://shop.example.com"
     monkeypatch.setenv("ALLOWED_ORIGINS", site)
+    monkeypatch.setenv("SESSION_COOKIE_SAMESITE", "None")
     app = create_app({"SECRET_KEY": "x", "SQLALCHEMY_DATABASE_URI": f"sqlite:///{tmp_path / 'c.db'}",
                       "UPLOAD_DIR": str(tmp_path / "up")})
     with app.app_context():
@@ -424,8 +425,70 @@ def test_cross_origin_admin_gets_cors_and_cross_site_cookie(tmp_path, monkeypatc
     res = c.post("/api/admin/login", json={"email": ADMIN_EMAIL, "password": ADMIN_PASSWORD},
                  headers={**HEADERS, "Origin": site})
     assert res.status_code == 200
-    cookie = res.headers["Set-Cookie"]
+    cookie = next(c for c in res.headers.getlist("Set-Cookie") if c.startswith("snug_admin="))
     assert "SameSite=None" in cookie and "Secure" in cookie and "HttpOnly" in cookie
 
     blocked = c.post("/api/admin/logout", headers={**HEADERS, "Origin": "https://evil.example"})
     assert blocked.status_code == 403
+
+
+
+def test_default_session_cookie_is_lax(client):
+    from conftest import ADMIN_EMAIL, ADMIN_PASSWORD
+
+    res = client.post("/api/admin/login", json={"email": ADMIN_EMAIL, "password": ADMIN_PASSWORD}, headers=HEADERS)
+    cookie = next(c for c in res.headers.getlist("Set-Cookie") if c.startswith("snug_admin="))
+    assert "SameSite=Lax" in cookie and "HttpOnly" in cookie
+
+
+def test_attacker_on_shared_address_cannot_lock_out_known_browser(app):
+    from conftest import ADMIN_EMAIL, ADMIN_PASSWORD
+
+    owner = app.test_client()
+    good = {"email": ADMIN_EMAIL, "password": ADMIN_PASSWORD}
+    assert owner.post("/api/admin/login", json=good, headers=HEADERS).status_code == 200  # gets device cookie
+    owner.post("/api/admin/logout", headers=HEADERS)
+
+    attacker = app.test_client()  # same address (test clients share 127.0.0.1), no device cookie
+    for _ in range(25):
+        attacker.post("/api/admin/login", json={"email": ADMIN_EMAIL, "password": "wrong-password!"}, headers=HEADERS)
+    assert attacker.post("/api/admin/login", json=good, headers=HEADERS).status_code == 429
+    assert owner.post("/api/admin/login", json=good, headers=HEADERS).status_code == 200
+
+
+def test_password_change_signs_out_other_browsers(app):
+    from conftest import ADMIN_EMAIL, ADMIN_PASSWORD
+
+    a, b = app.test_client(), app.test_client()
+    for c in (a, b):
+        c.post("/api/admin/login", json={"email": ADMIN_EMAIL, "password": ADMIN_PASSWORD}, headers=HEADERS)
+    res = a.post("/api/admin/password", json={"currentPassword": ADMIN_PASSWORD, "newPassword": "another-long-password"}, headers=HEADERS)
+    assert res.status_code == 200
+    assert a.get("/api/admin/me").get_json()["email"] == ADMIN_EMAIL
+    assert b.get("/api/admin/me").get_json() == {"email": None}
+
+
+def test_oversized_json_body_is_rejected(client):
+    body = b'{"email": "' + b"a" * 100_000 + b'"}'
+    res = client.post("/api/admin/login", data=body, headers={**HEADERS, "Content-Type": "application/json"})
+    assert res.status_code == 413
+
+
+def test_protocol_relative_announcement_link_rejected(admin):
+    for bad in ("//evil.com", "/\\evil.com"):
+        res = admin.patch("/api/admin/settings", json={"announcementHref": bad}, headers=HEADERS)
+        assert res.status_code == 422, bad
+    assert admin.patch("/api/admin/settings", json={"announcementHref": "/shop"}, headers=HEADERS).status_code == 200
+
+
+def test_huge_png_rejected_before_decoding(admin):
+    import io
+
+    from PIL import Image
+
+    buf = io.BytesIO()
+    Image.new("L", (7000, 6500)).save(buf, "PNG")  # 45.5 MP, tiny file
+    pid = admin.post("/api/admin/products", json=NEW_PRODUCT, headers=HEADERS).get_json()["product"]["id"]
+    res = admin.post(f"/api/admin/products/{pid}/images", data={"files": [(io.BytesIO(buf.getvalue()), "big.png")]}, headers=HEADERS)
+    assert res.status_code == 422
+    assert "too large" in res.get_json()["error"]
