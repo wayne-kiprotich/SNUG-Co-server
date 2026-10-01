@@ -83,7 +83,6 @@ Checklist:
 
 ## Not built
 
-- **Cloudinary or ImageKit.** Photos are stored on local disk through `LocalStorage` in `app/images.py`. To use a hosted service, write a class with the same `save` and `delete` methods. That needs an account and keys from SNUG, so it wasn't done.
 - **Database backups and audit logs.** There is no record of who changed what.
 
 ## Layout
@@ -98,4 +97,10 @@ Checklist:
 | `app/images.py` | Photo cropping, resizing and storage |
 | `app/cli.py` | `seed`, `create-admin`, `reset-password` |
 | `migrations/` | Database migrations |
-| `seed/catalog.json` | Starter catalog, made with `npm run export-catalog` in `client/` |
+| `seed/catalog.json` | Starter catalog loaded by `flask seed` |
+
+## Production on Render (one service, one domain)
+
+`render.yaml` at the repo root builds the React site, installs the server, runs `flask db upgrade`, and starts gunicorn. Flask serves the built site, `/api`, and page routes (direct links work). After the first deploy, set `VITE_WHATSAPP_NUMBER`, `VITE_SITE_URL` and `VITE_GOOGLE_SITE_VERIFICATION` in the Render dashboard, redeploy, then run `flask seed` and `flask create-admin` in the Render shell.
+
+Uploaded photos are saved to a 1 GB Render disk mounted at `/var/data` (`UPLOAD_DIR=/var/data/uploads`) and served from `/uploads`. Turn on Cloudflare's proxy for the domain so photos are cached near customers; they are sent with a one-year cache header.

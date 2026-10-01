@@ -4,10 +4,10 @@ from sqlalchemy import func
 from ..errors import ApiError, ValidationError
 from ..extensions import db
 from ..images import get_storage, new_image_id, process_image
-from ..models import Category, Collection, Product, ProductImage
+from ..models import Category, Collection, Product, ProductImage, SiteSettings
 from ..security import login_required
-from ..serializers import image_registry, product_json, taxonomy_json
-from ..validation import clean_product, clean_taxonomy, slugify
+from ..serializers import image_registry, product_json, settings_json, taxonomy_json
+from ..validation import clean_product, clean_settings, clean_taxonomy, slugify
 
 bp = Blueprint("admin", __name__, url_prefix="/api/admin")
 bp.before_request(login_required(lambda: None))
@@ -119,7 +119,6 @@ def create_product():
     if Product.query.filter_by(slug=wanted).first():
         raise ValidationError({"slug": "Another product already uses this web address."})
 
-    # New pieces appear first and count as the most recent.
     sort_order = (db.session.query(func.min(Product.sort_order)).scalar() or 0) - 1
     recency = (db.session.query(func.min(Product.recency)).scalar() or 0) - 1
     product = Product(slug=wanted, category=category, collections=collections, sort_order=sort_order, recency=recency)
@@ -154,7 +153,6 @@ def update_product(product_id):
         product.slug = wanted
 
     apply_product(product, cleaned)
-    # Compare-at must still be higher than the stored price after a partial update.
     if product.compare_at_price_kes is not None and (
         product.price_kes is None or product.compare_at_price_kes <= product.price_kes
     ):
@@ -209,7 +207,6 @@ def upload_images(product_id):
     storage = get_storage(current_app)
     max_bytes = current_app.config["MAX_UPLOAD_BYTES"]
     prepared = []
-    # Process every file before saving any, so one bad photo doesn't leave a half-finished batch.
     for upload in files:
         data = upload.read(max_bytes + 1)
         if len(data) > max_bytes:
@@ -375,3 +372,32 @@ def register_taxonomy(path, model, label):
 
 register_taxonomy("categories", Category, "category")
 register_taxonomy("collections", Collection, "collection")
+
+
+# ---- Site settings ---------------------------------------------------------
+
+
+def get_settings_row():
+    row = db.session.get(SiteSettings, 1)
+    if row is None:
+        row = SiteSettings(id=1)
+        db.session.add(row)
+        db.session.commit()
+    return row
+
+
+@bp.get("/settings")
+def get_settings():
+    return jsonify({"settings": settings_json(get_settings_row())})
+
+
+@bp.patch("/settings")
+def update_settings():
+    cleaned = clean_settings(request.get_json(silent=True))
+    row = get_settings_row()
+    if "announcementText" in cleaned:
+        row.announcement_text = cleaned["announcementText"]
+    if "announcementHref" in cleaned:
+        row.announcement_href = cleaned["announcementHref"]
+    db.session.commit()
+    return jsonify({"settings": settings_json(row)})

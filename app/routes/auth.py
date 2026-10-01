@@ -73,8 +73,6 @@ def change_password():
     check_new_password(body.get("newPassword"))
     g.admin.password_hash = generate_password_hash(body["newPassword"])
     db.session.commit()
-    # Sessions are signed cookies, so a stolen cookie stays valid until it expires (8 hours)
-    # or SECRET_KEY changes. Rotate SECRET_KEY to sign everyone out.
     session.clear()
     session["admin_id"] = g.admin.id
     session.permanent = True

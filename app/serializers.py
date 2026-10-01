@@ -54,6 +54,13 @@ def product_json(p, admin=False):
     return data
 
 
+def settings_json(row):
+    return {
+        "announcementText": row.announcement_text,
+        "announcementHref": row.announcement_href,
+    }
+
+
 def taxonomy_json(item, admin=False):
     data = {
         "id": item.id if admin else f"{'c' if item.__tablename__ == 'categories' else 'k'}{item.id}",

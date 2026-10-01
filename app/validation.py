@@ -1,8 +1,4 @@
-"""Input cleaning for the admin API.
-
-Every function returns cleaned values or raises ValidationError with a
-{field: message} map, so the admin form can show each message next to its field.
-"""
+"""Input cleaning for the admin API."""
 
 import re
 import unicodedata
@@ -159,6 +155,27 @@ class Cleaner:
             return
         self.out[key] = str(value).strip()
 
+    def link(self, key):
+        """A web address or a path on this site, e.g. /shop?collection=kenya."""
+        present, value = self._present(key, None)
+        if not present:
+            return
+        if value in (None, ""):
+            self.out[key] = None
+            return
+        value = str(value).strip()
+        if len(value) > 300:
+            self.errors[key] = "Keep this under 300 characters."
+            return
+        if value.startswith("/"):
+            self.out[key] = value
+            return
+        parsed = urlparse(value)
+        if parsed.scheme not in ("http", "https") or not parsed.netloc:
+            self.errors[key] = "Enter a page on this site (starting with /) or a full https:// address."
+            return
+        self.out[key] = value
+
     def colors(self, key="colors"):
         present, value = self._present(key, None)
         if not present:
@@ -292,6 +309,15 @@ def clean_taxonomy(data, partial=False):
     c.slug("slug")
     c.text("description", max_len=300)
     c.text("image", max_len=80)
+    if c.errors:
+        raise ValidationError(c.errors)
+    return c.out
+
+
+def clean_settings(data, partial=True):
+    c = Cleaner(data, partial)
+    c.text("announcementText", max_len=200)
+    c.link("announcementHref")
     if c.errors:
         raise ValidationError(c.errors)
     return c.out

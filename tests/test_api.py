@@ -302,3 +302,21 @@ def test_deleting_a_collection_detaches_products(admin):
     assert admin.delete(f"/api/admin/collections/{kenya['id']}", headers=HEADERS).status_code == 200
     products = admin.get("/api/catalog").get_json()["products"]
     assert all("kenya" not in p["collections"] for p in products)
+
+
+def test_site_served_with_spa_fallback(tmp_path):
+    from app import create_app
+
+    (tmp_path / "index.html").write_text("<html>app</html>")
+    app = create_app({"SECRET_KEY": "x", "SQLALCHEMY_DATABASE_URI": "sqlite://", "CLIENT_DIST": str(tmp_path),
+                      "UPLOAD_DIR": str(tmp_path / "up")})
+    c = app.test_client()
+    assert b"app" in c.get("/shop/some-page").data
+    assert c.get("/api/nope").status_code == 404
+    assert c.get("/uploads/x.png").status_code == 404
+
+
+def test_sitemap_and_robots(client):
+    xml = client.get("/sitemap.xml").get_data(as_text=True)
+    assert "/product/kenya-bomber-jacket" in xml and "/shop" in xml
+    assert "Sitemap:" in client.get("/robots.txt").get_data(as_text=True)

@@ -1,7 +1,8 @@
 from flask import Blueprint, jsonify
 
-from ..models import Category, Collection, Product
-from ..serializers import image_registry, product_json, taxonomy_json
+from ..extensions import db
+from ..models import Category, Collection, Product, SiteSettings
+from ..serializers import image_registry, product_json, settings_json, taxonomy_json
 
 bp = Blueprint("public", __name__, url_prefix="/api")
 
@@ -9,6 +10,14 @@ bp = Blueprint("public", __name__, url_prefix="/api")
 @bp.get("/health")
 def health():
     return jsonify({"status": "ok"})
+
+
+@bp.get("/settings")
+def settings():
+    row = db.session.get(SiteSettings, 1)
+    response = jsonify(settings_json(row) if row else {"announcementText": None, "announcementHref": None})
+    response.headers["Cache-Control"] = "public, max-age=60"
+    return response
 
 
 @bp.get("/catalog")

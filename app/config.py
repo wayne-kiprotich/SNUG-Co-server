@@ -10,7 +10,6 @@ def _database_uri(url):
         instance = BASE_DIR / "instance"
         instance.mkdir(exist_ok=True)
         return f"sqlite:///{instance / 'snug.db'}"
-    # Hosts often hand out postgres:// URLs. SQLAlchemy needs the driver named.
     for prefix in ("postgres://", "postgresql://"):
         if url.startswith(prefix):
             return "postgresql+psycopg://" + url[len(prefix):]
@@ -23,10 +22,12 @@ def build_config(overrides=None):
     upload_dir = env("UPLOAD_DIR") or str(BASE_DIR / "uploads")
 
     config = {
+        "SITE_URL": env("SITE_URL") or env("VITE_SITE_URL") or "",
         "SECRET_KEY": env("SECRET_KEY"),
         "DEBUG": debug,
         "SQLALCHEMY_DATABASE_URI": _database_uri(env("DATABASE_URL")),
         "UPLOAD_DIR": upload_dir,
+        "CLIENT_DIST": env("CLIENT_DIST") or str(BASE_DIR.parent / "client" / "dist"),
         "UPLOAD_URL_BASE": (env("UPLOAD_URL_BASE") or "/uploads").rstrip("/"),
         "MAX_CONTENT_LENGTH": 40 * 1024 * 1024,  # whole request; each photo is checked to 16 MB below
         "MAX_UPLOAD_BYTES": 16 * 1024 * 1024,

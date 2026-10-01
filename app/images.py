@@ -1,10 +1,4 @@
-"""Photo processing and storage.
-
-Uploads are decoded with Pillow (so the file's real contents are checked, not its
-name), cropped to the 4:5 portrait ratio the site uses, and written as WebP at
-several widths. Storage is local disk. To use Cloudinary or ImageKit later,
-replace LocalStorage with a class that has the same three methods.
-"""
+"""Photo processing and storage."""
 
 import io
 import os
@@ -80,8 +74,7 @@ class LocalStorage:
         return f"{image_id}-{width}.webp"
 
     def save(self, image_id, files):
-        """Write every width. Files are written to a temp name and renamed so a
-        partly written photo is never served."""
+        """Write every width."""
         written = []
         try:
             for width, blob in files.items():

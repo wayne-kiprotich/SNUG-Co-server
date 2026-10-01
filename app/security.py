@@ -15,11 +15,7 @@ CSRF_VALUE = "snug-admin"
 
 
 def csrf_guard():
-    """Reject state-changing admin requests that didn't come from our own admin page.
-
-    Browsers only let a page send a custom header to a different origin after a
-    CORS preflight, which this API never grants. The Origin check is a second layer.
-    """
+    """Reject state-changing admin requests that didn't come from our own admin page."""
     if not request.path.startswith("/api/admin") or request.method in SAFE_METHODS:
         return
     if request.headers.get(CSRF_HEADER) != CSRF_VALUE:
@@ -52,11 +48,7 @@ def login_required(fn):
 
 
 class LoginThrottle:
-    """Small in-memory limiter for sign-in attempts.
-
-    It resets when the server restarts and isn't shared between workers. Put
-    rate limiting on the reverse proxy as well if the admin is public.
-    """
+    """Small in-memory limiter for sign-in attempts."""
 
     def __init__(self):
         self._attempts = {}

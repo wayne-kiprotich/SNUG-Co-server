@@ -31,7 +31,6 @@ class Category(db.Model):
     name = db.Column(db.String(80), nullable=False)
     slug = db.Column(db.String(80), unique=True, nullable=False)
     description = db.Column(db.String(300))
-    # An image id: either a bundled site image or an uploaded one.
     image_id = db.Column(db.String(80))
     sort_order = db.Column(db.Integer, default=0, nullable=False)
 
@@ -76,7 +75,6 @@ class Product(db.Model):
     featured = db.Column(db.Boolean, default=False, nullable=False)
     new_arrival = db.Column(db.Boolean, default=False, nullable=False)
     published = db.Column(db.Boolean, default=True, nullable=False)
-    # Lower recency means more recently added. Lower sort_order shows earlier.
     recency = db.Column(db.Integer, default=0, nullable=False)
     sort_order = db.Column(db.Integer, default=0, nullable=False)
     source_post = db.Column(db.String(300))
@@ -95,16 +93,25 @@ class Product(db.Model):
     )
 
 
+class SiteSettings(db.Model):
+    """A single row of admin-editable site-wide content (e.g. the announcement bar)."""
+
+    __tablename__ = "site_settings"
+
+    id = db.Column(db.Integer, primary_key=True)
+    announcement_text = db.Column(db.String(200))
+    announcement_href = db.Column(db.String(300))
+    updated_at = db.Column(db.DateTime(timezone=True), default=_now, onupdate=_now, nullable=False)
+
+
 class ProductImage(db.Model):
     __tablename__ = "product_images"
 
-    # For bundled site images this is the image name. For uploads it is "u" plus random hex.
     id = db.Column(db.String(80), primary_key=True)
     product_id = db.Column(db.Integer, db.ForeignKey("products.id", ondelete="CASCADE"), nullable=False)
     position = db.Column(db.Integer, default=0, nullable=False)
     alt = db.Column(db.String(300), default="", nullable=False)
     is_upload = db.Column(db.Boolean, default=False, nullable=False)
-    # Set only for uploads: the widths written to disk and the largest size.
     widths = db.Column(db.JSON)
     width = db.Column(db.Integer)
     height = db.Column(db.Integer)
