@@ -1,7 +1,7 @@
 from flask import Blueprint, jsonify
 
 from ..extensions import db
-from ..models import Category, Collection, Product, SiteSettings
+from ..models import Category, Collection, Product, SiteSettings, with_relations
 from ..serializers import image_registry, product_json, settings_json, taxonomy_json
 
 bp = Blueprint("public", __name__, url_prefix="/api")
@@ -28,7 +28,7 @@ def settings():
 def catalog():
     """Everything the storefront needs in one request. Hidden products are left out."""
     products = (
-        Product.query.filter_by(published=True).order_by(Product.sort_order, Product.id).all()
+        with_relations(Product.query.filter_by(published=True)).order_by(Product.sort_order, Product.id).all()
     )
     categories = Category.query.order_by(Category.sort_order, Category.id).all()
     collections = Collection.query.order_by(Collection.sort_order, Collection.id).all()

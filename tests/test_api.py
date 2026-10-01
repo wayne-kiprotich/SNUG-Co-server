@@ -492,3 +492,20 @@ def test_huge_png_rejected_before_decoding(admin):
     res = admin.post(f"/api/admin/products/{pid}/images", data={"files": [(io.BytesIO(buf.getvalue()), "big.png")]}, headers=HEADERS)
     assert res.status_code == 422
     assert "too large" in res.get_json()["error"]
+
+
+def test_catalog_uses_a_fixed_number_of_queries(app, client):
+    from sqlalchemy import event
+
+    from app.extensions import db
+
+    with app.app_context():
+        engine = db.engine
+    count = []
+    listener = lambda *a, **k: count.append(1)
+    event.listen(engine, "before_cursor_execute", listener)
+    try:
+        client.get("/api/catalog")
+    finally:
+        event.remove(engine, "before_cursor_execute", listener)
+    assert len(count) <= 8, f"{len(count)} queries; each is a slow round trip in production"

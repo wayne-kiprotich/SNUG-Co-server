@@ -4,7 +4,7 @@ from sqlalchemy import func
 from ..errors import ApiError, ValidationError
 from ..extensions import db
 from ..images import get_storage, new_image_id, process_image
-from ..models import Category, Collection, Product, ProductImage, SiteSettings
+from ..models import Category, Collection, Product, ProductImage, SiteSettings, with_relations
 from ..security import login_required
 from ..serializers import SETTINGS_IMAGES, image_registry, product_json, settings_json, taxonomy_json
 from ..validation import clean_product, clean_settings, clean_taxonomy, slugify
@@ -99,7 +99,7 @@ def move_in_order(model, item, direction):
 
 @bp.get("/products")
 def list_products():
-    products = Product.query.order_by(Product.sort_order, Product.id).all()
+    products = with_relations(Product.query).order_by(Product.sort_order, Product.id).all()
     return jsonify(
         {
             "products": [product_json(p, admin=True) for p in products],

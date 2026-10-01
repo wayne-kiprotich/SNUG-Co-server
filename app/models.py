@@ -52,6 +52,16 @@ class Collection(db.Model):
     products = db.relationship("Product", secondary=product_collections, back_populates="collections")
 
 
+def with_relations(query):
+    """Load products' category, collections and photos in 3 queries total, not 2 per product.
+
+    Each database round trip is slow when the server and database are in different regions.
+    """
+    from sqlalchemy.orm import joinedload, selectinload
+
+    return query.options(joinedload(Product.category), selectinload(Product.collections), selectinload(Product.images))
+
+
 class Product(db.Model):
     __tablename__ = "products"
 
