@@ -16,7 +16,7 @@ CSRF_VALUE = "snug-admin"
 
 
 def csrf_guard():
-    """Reject state-changing admin requests that didn't come from our own admin page."""
+    """Block admin writes not sent by our own admin page."""
     if not request.path.startswith("/api/admin") or request.method in SAFE_METHODS:
         return
     if request.headers.get(CSRF_HEADER) != CSRF_VALUE:
@@ -62,7 +62,7 @@ def _device_serializer():
 
 
 def device_id():
-    """The id in this browser's signed device cookie, set after a successful sign-in, or None."""
+    """Id from the signed device cookie, or None."""
     raw = request.cookies.get(DEVICE_COOKIE)
     if not raw:
         return None
@@ -98,7 +98,7 @@ def login_required(fn):
 
 
 class LoginThrottle:
-    """Small in-memory limiter for sign-in attempts."""
+    """In-memory sign-in rate limit."""
 
     def __init__(self):
         self._attempts = {}

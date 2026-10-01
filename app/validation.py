@@ -30,7 +30,7 @@ class Cleaner:
         self.out = {}
 
     def _present(self, key, default=None, required=False):
-        """Return (present, value). Applies the default on create when the key is absent."""
+        """Return (present, value)."""
         if key in self.data:
             return True, self.data[key]
         if self.partial:
@@ -156,7 +156,7 @@ class Cleaner:
         self.out[key] = str(value).strip()
 
     def link(self, key):
-        """A web address or a path on this site, e.g. /shop?collection=kenya."""
+        """Site path (/shop) or https URL."""
         present, value = self._present(key, None)
         if not present:
             return
@@ -168,7 +168,7 @@ class Cleaner:
             self.errors[key] = "Keep this under 300 characters."
             return
         if value.startswith("/"):
-            # "//evil.com" and "/\\evil.com" look internal but leave the site.
+            # "//x.com" and "/\\x.com" leave the site.
             if value.startswith("//") or "\\" in value:
                 self.errors[key] = "Enter a page on this site (starting with /) or a full https:// address."
                 return
@@ -307,7 +307,7 @@ def clean_product(data, partial=False):
 
 
 def clean_taxonomy(data, partial=False):
-    """Categories and collections share the same fields."""
+    """Shared by categories and collections."""
     c = Cleaner(data, partial)
     c.text("name", required=True, max_len=80)
     c.slug("slug")

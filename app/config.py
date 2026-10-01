@@ -22,8 +22,7 @@ def build_config(overrides=None):
     upload_dir = env("UPLOAD_DIR") or str(BASE_DIR / "uploads")
 
     allowed_origins = [o.strip() for o in (env("ALLOWED_ORIGINS") or "").split(",") if o.strip()]
-    # Lax unless the admin really is served from another site than this API (no proxy in
-    # between). Then set SESSION_COOKIE_SAMESITE=None, which browsers only accept over HTTPS.
+    # Set to None only if the admin calls this API cross-site (needs HTTPS).
     samesite = env("SESSION_COOKIE_SAMESITE") or "Lax"
 
     supabase_url = env("SUPABASE_URL") or ""
@@ -44,7 +43,7 @@ def build_config(overrides=None):
         "SUPABASE_URL": supabase_url,
         "SUPABASE_SERVICE_KEY": supabase_key,
         "SUPABASE_BUCKET": supabase_bucket,
-        # Most requests are small JSON. Only photo uploads raise this (MAX_UPLOAD_REQUEST_BYTES).
+        # Photo uploads raise this to MAX_UPLOAD_REQUEST_BYTES.
         "MAX_CONTENT_LENGTH": 64 * 1024,
         "MAX_UPLOAD_REQUEST_BYTES": 40 * 1024 * 1024,
         "MAX_UPLOAD_BYTES": 16 * 1024 * 1024,
@@ -54,7 +53,7 @@ def build_config(overrides=None):
         "SESSION_COOKIE_SAMESITE": samesite,
         "SESSION_COOKIE_SECURE": samesite == "None" or not debug,
         "PERMANENT_SESSION_LIFETIME": timedelta(hours=8),
-        # Even an active session must sign in again after this.
+        # Hard limit, even for an active session.
         "SESSION_MAX_AGE": timedelta(days=7),
         "ALLOWED_ORIGINS": allowed_origins,
         "TRUSTED_PROXIES": int(env("TRUSTED_PROXIES") or 0),

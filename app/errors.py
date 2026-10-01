@@ -3,7 +3,7 @@ from werkzeug.exceptions import HTTPException
 
 
 class ApiError(Exception):
-    """An error with a message that is safe to show to the person using the admin."""
+    """Error with a message safe to show the user."""
 
     def __init__(self, status, message, fields=None):
         super().__init__(message)

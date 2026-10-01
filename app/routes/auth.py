@@ -10,7 +10,7 @@ from ..security import current_admin, device_id, login_required, login_throttle,
 
 bp = Blueprint("auth", __name__, url_prefix="/api/admin")
 
-# Checked when the email is unknown, so a wrong email and a wrong password take the same time.
+# Same timing for unknown email and wrong password.
 _DUMMY_HASH = generate_password_hash("not-a-real-password")
 MIN_PASSWORD = 12
 
@@ -29,9 +29,7 @@ def login():
     password = body.get("password", "")
     cfg = current_app.config
     limit, window = cfg["LOGIN_MAX_ATTEMPTS"], cfg["LOGIN_WINDOW_SECONDS"]
-    # Behind a proxy (Vercel) many visitors share one address, so an attacker could use up
-    # the address's attempts and lock the owner out. A browser that has signed in before
-    # carries a signed device cookie and gets its own bucket, which an attacker can't share.
+    # Known browsers get their own limit, so others on a shared proxy IP can't lock them out.
     device = device_id()
     if device:
         keys = [("device", device, email)]
@@ -69,8 +67,6 @@ def logout():
 @bp.get("/me")
 def me():
     admin = current_admin()
-    # 200 with null, not 401: being signed out is a normal answer here, and a 401 shows up
-    # as an error in the browser console on every visit to the sign-in page.
     if admin is None:
         return jsonify({"email": None})
     return jsonify({"email": admin.email})

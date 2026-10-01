@@ -1,4 +1,4 @@
-"""Turns database rows into the JSON shape the React client already uses."""
+"""Database rows to client JSON."""
 
 from flask import current_app
 
@@ -11,7 +11,7 @@ def image_meta(image):
 
 
 def image_registry(image_ids):
-    """Metadata for uploaded images. Bundled site images are resolved by the client itself."""
+    """Metadata for uploaded images. The client resolves bundled ones."""
     ids = {i for i in image_ids if i}
     if not ids:
         return {}

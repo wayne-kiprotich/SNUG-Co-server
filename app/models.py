@@ -22,7 +22,7 @@ class AdminUser(db.Model):
     password_hash = db.Column(db.String(255), nullable=False)
     created_at = db.Column(db.DateTime(timezone=True), default=_now, nullable=False)
     last_login_at = db.Column(db.DateTime(timezone=True))
-    # Bumped on password change; sessions carrying an older number stop working.
+    # Bumped on password change to end other sessions.
     session_version = db.Column(db.Integer, default=0, nullable=False, server_default="0")
 
 
@@ -53,10 +53,7 @@ class Collection(db.Model):
 
 
 def with_relations(query):
-    """Load products' category, collections and photos in 3 queries total, not 2 per product.
-
-    Each database round trip is slow when the server and database are in different regions.
-    """
+    """Load category, collections and photos up front (avoids a query per product)."""
     from sqlalchemy.orm import joinedload, selectinload
 
     return query.options(joinedload(Product.category), selectinload(Product.collections), selectinload(Product.images))
@@ -106,7 +103,7 @@ class Product(db.Model):
 
 
 class SiteSettings(db.Model):
-    """A single row of admin-editable site-wide content (e.g. the announcement bar)."""
+    """Single row of site-wide settings."""
 
     __tablename__ = "site_settings"
 

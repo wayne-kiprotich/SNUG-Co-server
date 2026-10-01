@@ -6,8 +6,7 @@ from ..serializers import image_registry, product_json, settings_json, taxonomy_
 
 bp = Blueprint("public", __name__, url_prefix="/api")
 
-# Browsers keep it a minute. A CDN in front (Vercel) keeps it too and serves the stale copy
-# instantly while refreshing in the background, so a sleeping server never blocks a visitor.
+# CDN serves stale copies while refreshing, so a sleeping server never blocks visitors.
 PUBLIC_CACHE = "public, max-age=60, s-maxage=60, stale-while-revalidate=604800, stale-if-error=604800"
 
 
@@ -26,7 +25,7 @@ def settings():
 
 @bp.get("/catalog")
 def catalog():
-    """Everything the storefront needs in one request. Hidden products are left out."""
+    """Published catalog in one request."""
     products = (
         with_relations(Product.query.filter_by(published=True)).order_by(Product.sort_order, Product.id).all()
     )

@@ -13,7 +13,7 @@ SEED_FILE = Path(__file__).resolve().parent.parent / "seed" / "catalog.json"
 
 
 def load_catalog(data):
-    """Insert categories, collections and products from the seed file's JSON."""
+    """Insert the seed catalog."""
     categories = {}
     for i, c in enumerate(data["categories"]):
         row = Category(
@@ -67,7 +67,7 @@ def register_cli(app):
     @app.cli.command("seed")
     @click.option("--file", "path", type=click.Path(exists=True, dir_okay=False), default=str(SEED_FILE))
     def seed(path):
-        """Load the starter catalog (from the storefront's bundled data). Only runs on an empty database."""
+        """Load the starter catalog into an empty database."""
         if Product.query.first() or Category.query.first():
             raise click.ClickException("The database already has a catalog. Seeding was skipped.")
         count = load_catalog(json.loads(Path(path).read_text()))
@@ -77,7 +77,7 @@ def register_cli(app):
     @click.option("--email", prompt=True)
     @click.password_option(confirmation_prompt=True)
     def create_admin(email, password):
-        """Create a person who can sign in to the admin."""
+        """Create an admin account."""
         email = email.strip().lower()
         if "@" not in email:
             raise click.ClickException("Enter a valid email address.")
@@ -97,13 +97,7 @@ def register_cli(app):
         help="Path to the client repo (default: ../client next to this one, on this machine).",
     )
     def import_bundled_photos(client_dir):
-        """Upload the storefront's bundled product photos to storage, once.
-
-        The seeded catalog points at photo ids that ship inside the client's own
-        repo (client/public/images). Run this once, from a machine with both
-        repos checked out, so those same photos also exist in SUPABASE_URL
-        storage. Products then stop depending on the client bundling them.
-        """
+        """Upload the client's bundled photos to storage. Safe to re-run."""
         from flask import current_app
 
         from .images import SupabaseStorage, get_storage
@@ -151,7 +145,7 @@ def register_cli(app):
     @click.option("--email", prompt=True)
     @click.password_option(confirmation_prompt=True)
     def reset_password(email, password):
-        """Set a new password for an existing admin."""
+        """Set a new admin password."""
         user = AdminUser.query.filter_by(email=email.strip().lower()).first()
         if user is None:
             raise click.ClickException("No admin has that email.")

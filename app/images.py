@@ -15,7 +15,7 @@ WIDTHS = (480, 800, 1080, 1600)
 RATIO = 4 / 5
 MIN_WIDTH = 600
 Image.MAX_IMAGE_PIXELS = 80_000_000
-# Decoded size limits, checked before decoding, so one photo can't use up the server's memory.
+# Checked before decoding to protect memory.
 MAX_PIXELS = 40_000_000  # PNG/WebP decode at full size
 MAX_JPEG_PIXELS = 120_000_000  # JPEG decodes at a reduced size via draft()
 
@@ -33,7 +33,7 @@ def process_image(data, focus_y=0.5):
         if pixels > (MAX_JPEG_PIXELS if fmt == "JPEG" else MAX_PIXELS):
             raise ApiError(422, "That photo is too large. Use one under 40 megapixels.")
         if fmt == "JPEG":
-            # Decode at the smallest scale that still covers the largest size we keep.
+            # Decode JPEGs at reduced size.
             img.draft("RGB", (2000, 2000))
         img.load()
     except (UnidentifiedImageError, OSError, Image.DecompressionBombError, ValueError):
@@ -102,7 +102,7 @@ class LocalStorage:
 
 
 def _ssl_context():
-    """Verify HTTPS against certifi's CA bundle, so it works the same on macOS and on Render."""
+    """HTTPS verified with certifi's CA bundle."""
     import ssl
 
     import certifi
@@ -111,7 +111,7 @@ def _ssl_context():
 
 
 class SupabaseStorage:
-    """Stores photos in a Supabase Storage bucket, over its plain REST API."""
+    """Photos in a Supabase Storage bucket."""
 
     def __init__(self, url, service_key, bucket):
         self.base = f"{url.rstrip('/')}/storage/v1"
@@ -137,7 +137,7 @@ class SupabaseStorage:
                         **self.headers,
                         "Content-Type": "image/webp",
                         "x-upsert": "true",
-                        # File names are random and never reused, so CDNs and browsers can keep them for a year.
+                        # Names are never reused, so cache for a year.
                         "cache-control": "max-age=31536000",
                     },
                 )

@@ -44,7 +44,7 @@ def get_or_404(model, item_id, label):
 
 
 def product_payload(product):
-    """A product plus the metadata the admin needs to show its uploaded photos."""
+    """Product plus its photo metadata."""
     return {
         "product": product_json(product, admin=True),
         "images": image_registry(i.id for i in product.images),
@@ -292,7 +292,7 @@ def delete_image(product_id, image_id):
 
 @bp.get("/images")
 def list_images():
-    """Every photo, for choosing a category or collection cover."""
+    """All photos, for cover pickers."""
     rows = ProductImage.query.order_by(ProductImage.product_id, ProductImage.position).all()
     return jsonify(
         {

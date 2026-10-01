@@ -47,8 +47,7 @@ def create_app(test_config=None):
 
     @app.before_request
     def cors_preflight():
-        # The browser asks permission before a cross-site request that carries cookies or
-        # custom headers. Answer it here, before auth or CSRF checks run.
+        # Answer CORS preflight before auth and CSRF checks.
         if request.method == "OPTIONS" and request.headers.get("Origin") in allowed_origins:
             return app.response_class(status=204)
 
