@@ -21,6 +21,18 @@ def build_config(overrides=None):
     debug = env("FLASK_DEBUG", "0") == "1"
     upload_dir = env("UPLOAD_DIR") or str(BASE_DIR / "uploads")
 
+    allowed_origins = [o.strip() for o in (env("ALLOWED_ORIGINS") or "").split(",") if o.strip()]
+    # The client is on its own domain when other origins are allowed, so the admin cookie
+    # must be sent cross-site. That needs SameSite=None, which browsers only honour over HTTPS.
+    cross_site = bool(allowed_origins)
+
+    supabase_url = env("SUPABASE_URL") or ""
+    supabase_key = env("SUPABASE_SERVICE_KEY") or ""
+    supabase_bucket = env("SUPABASE_BUCKET") or "product-photos"
+    upload_url_base = env("UPLOAD_URL_BASE")
+    if supabase_url and supabase_key and not upload_url_base:
+        upload_url_base = f"{supabase_url.rstrip('/')}/storage/v1/object/public/{supabase_bucket}"
+
     config = {
         "SITE_URL": env("SITE_URL") or env("VITE_SITE_URL") or "",
         "SECRET_KEY": env("SECRET_KEY"),
@@ -28,16 +40,19 @@ def build_config(overrides=None):
         "SQLALCHEMY_DATABASE_URI": _database_uri(env("DATABASE_URL")),
         "UPLOAD_DIR": upload_dir,
         "CLIENT_DIST": env("CLIENT_DIST") or str(BASE_DIR.parent / "client" / "dist"),
-        "UPLOAD_URL_BASE": (env("UPLOAD_URL_BASE") or "/uploads").rstrip("/"),
+        "UPLOAD_URL_BASE": (upload_url_base or "/uploads").rstrip("/"),
+        "SUPABASE_URL": supabase_url,
+        "SUPABASE_SERVICE_KEY": supabase_key,
+        "SUPABASE_BUCKET": supabase_bucket,
         "MAX_CONTENT_LENGTH": 40 * 1024 * 1024,  # whole request; each photo is checked to 16 MB below
         "MAX_UPLOAD_BYTES": 16 * 1024 * 1024,
         "MAX_IMAGES_PER_PRODUCT": 12,
         "SESSION_COOKIE_NAME": "snug_admin",
         "SESSION_COOKIE_HTTPONLY": True,
-        "SESSION_COOKIE_SAMESITE": "Lax",
-        "SESSION_COOKIE_SECURE": not debug,
+        "SESSION_COOKIE_SAMESITE": "None" if cross_site else "Lax",
+        "SESSION_COOKIE_SECURE": cross_site or not debug,
         "PERMANENT_SESSION_LIFETIME": timedelta(hours=8),
-        "ALLOWED_ORIGINS": [o.strip() for o in (env("ALLOWED_ORIGINS") or "").split(",") if o.strip()],
+        "ALLOWED_ORIGINS": allowed_origins,
         "TRUSTED_PROXIES": int(env("TRUSTED_PROXIES") or 0),
         "LOGIN_MAX_ATTEMPTS": 5,
         "LOGIN_WINDOW_SECONDS": 15 * 60,

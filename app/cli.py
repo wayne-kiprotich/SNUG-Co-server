@@ -88,6 +88,59 @@ def register_cli(app):
         db.session.commit()
         click.echo(f"Created admin {email}.")
 
+    @app.cli.command("import-bundled-photos")
+    @click.option(
+        "--client-dir",
+        type=click.Path(exists=True, file_okay=False),
+        default=str(SEED_FILE.parent.parent.parent / "client"),
+        help="Path to the client repo (default: ../client next to this one, on this machine).",
+    )
+    def import_bundled_photos(client_dir):
+        """Upload the storefront's bundled product photos to storage, once.
+
+        The seeded catalog points at photo ids that ship inside the client's own
+        repo (client/public/images). Run this once, from a machine with both
+        repos checked out, so those same photos also exist in SUPABASE_URL
+        storage. Products then stop depending on the client bundling them.
+        """
+        from flask import current_app
+
+        from .images import SupabaseStorage, get_storage
+
+        storage = get_storage(current_app)
+        if not isinstance(storage, SupabaseStorage):
+            raise click.ClickException("Set SUPABASE_URL and SUPABASE_SERVICE_KEY in server/.env first.")
+
+        client_dir = Path(client_dir)
+        images_dir = client_dir / "public" / "images"
+        manifest_file = client_dir / "src" / "data" / "image-manifest.json"
+        if not manifest_file.exists():
+            raise click.ClickException(f"Can't find {manifest_file}. Pass --client-dir.")
+        manifest = json.loads(manifest_file.read_text())
+
+        images = ProductImage.query.filter_by(is_upload=False).all()
+        done = skipped = 0
+        for image in images:
+            meta = manifest.get(image.id)
+            if not meta:
+                click.echo(f"skip {image.id}: not in image-manifest.json")
+                skipped += 1
+                continue
+            files = {}
+            for width in meta["widths"]:
+                path = images_dir / f"{image.id}-{width}.webp"
+                if not path.exists():
+                    click.echo(f"skip {image.id}: missing {path.name}")
+                    break
+                files[width] = path.read_bytes()
+            else:
+                storage.save(image.id, files)
+                image.is_upload = True
+                image.widths, image.width, image.height = meta["widths"], meta["width"], meta["height"]
+                db.session.commit()
+                done += 1
+        click.echo(f"Uploaded {done} photos. {skipped} skipped.")
+
     @app.cli.command("reset-password")
     @click.option("--email", prompt=True)
     @click.password_option(confirmation_prompt=True)

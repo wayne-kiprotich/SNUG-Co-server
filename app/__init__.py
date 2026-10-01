@@ -43,6 +43,15 @@ def create_app(test_config=None):
     register_errors(app)
     register_cli(app)
 
+    allowed_origins = set(app.config["ALLOWED_ORIGINS"])
+
+    @app.before_request
+    def cors_preflight():
+        # The browser asks permission before a cross-site request that carries cookies or
+        # custom headers. Answer it here, before auth or CSRF checks run.
+        if request.method == "OPTIONS" and request.headers.get("Origin") in allowed_origins:
+            return app.response_class(status=204)
+
     app.before_request(csrf_guard)
     app.register_blueprint(public.bp)
     app.register_blueprint(auth.bp)
@@ -103,6 +112,15 @@ def create_app(test_config=None):
         response.headers.setdefault("X-Content-Type-Options", "nosniff")
         if request.path.startswith("/api/admin"):
             response.headers["Cache-Control"] = "no-store"
+        origin = request.headers.get("Origin")
+        if origin in allowed_origins:
+            response.headers["Access-Control-Allow-Origin"] = origin
+            response.headers["Access-Control-Allow-Credentials"] = "true"
+            response.headers["Vary"] = "Origin"
+            if request.method == "OPTIONS":
+                response.headers["Access-Control-Allow-Methods"] = "GET, POST, PUT, PATCH, DELETE"
+                response.headers["Access-Control-Allow-Headers"] = "Content-Type, X-Requested-With"
+                response.headers["Access-Control-Max-Age"] = "600"
         return response
 
     return app

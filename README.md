@@ -67,16 +67,41 @@ Checklist:
 
 - `SECRET_KEY` is set to a long random value and never committed. Changing it signs everyone out.
 - `FLASK_DEBUG` is `0` (or unset). Cookies are then marked `Secure`, so the site must use HTTPS.
-- The proxy passes the original `Host` header. The admin API rejects requests whose `Origin` doesn't match it. Set `TRUSTED_PROXIES=1` if the proxy sets `X-Forwarded-*` headers.
-- `UPLOAD_DIR` points to a disk that survives redeploys, and it is backed up. Uploaded photos are files, not database rows.
-- For PostgreSQL, install `requirements-postgres.txt` and set `DATABASE_URL`. Run `flask db upgrade` after every update.
-- Build the client with `VITE_API_URL=/api` so the storefront reads the live catalog.
+- The proxy passes the original `Host` header. The admin API rejects requests whose `Origin` doesn't match it (or an address in `ALLOWED_ORIGINS`). Set `TRUSTED_PROXIES=1` if the proxy sets `X-Forwarded-*` headers.
+- `UPLOAD_DIR` points to a disk that survives redeploys, and it is backed up — or set `SUPABASE_URL`/`SUPABASE_SERVICE_KEY` to skip local disk entirely (see below). Uploaded photos are files, not database rows.
+- For PostgreSQL, install `requirements-postgres.txt` and set `DATABASE_URL`.
+- Build the client with `VITE_API_URL` pointing at this API, then run `flask db upgrade` after every schema change.
 - Add rate limiting to `/api/admin/login` at the proxy as well. The app's own limit (5 wrong tries per 15 minutes per address and email) resets on restart and isn't shared between workers.
+
+## Deploying the client on its own domain
+
+If the client is a separate app (its own repo, its own host — Vercel, Netlify, …) rather than built into this server's `CLIENT_DIST`, cookies and requests cross a domain boundary and need a bit more:
+
+- Set `ALLOWED_ORIGINS` to the client's exact origin(s), comma separated, e.g. `https://snugandco.vercel.app`. This switches the admin's sign-in cookie to `SameSite=None` (required for a cross-site cookie) and adds the CORS headers the browser needs.
+- Set the client's `VITE_API_URL` to this API's full address, e.g. `https://snug-co-server.onrender.com/api`.
+- Both origins must be HTTPS. A cross-site cookie needs `Secure`, which needs HTTPS — this isn't optional once `ALLOWED_ORIGINS` is set.
+- Photos need a store reachable by URL regardless of which host serves them — see Supabase Storage below. A local disk only serves photos on the same host that saved them.
+
+## Storing photos: local disk or Supabase Storage
+
+Photos are files, written at a few widths after upload. `app/images.py` has two storage backends with the same `save`/`delete` interface:
+
+- **Local disk** (default): fine for one machine, or a Render service with a persistent disk. Render's *free* tier has no persistent disk — anything saved there is lost on the next deploy or restart.
+- **Supabase Storage**: set `SUPABASE_URL`, `SUPABASE_SERVICE_KEY` (the service_role key, not anon — Project Settings → API) and `SUPABASE_BUCKET` (create it first: Storage → New bucket → Public bucket on). Photos are then durable regardless of Render's plan, and reachable from any host, which is what cross-domain deployment needs anyway.
+
+The storefront's 23 seeded products point at photos that ship inside the *client's* repo (`client/public/images`), not this one. Those never touch this server unless you move them. To make every photo come from this API instead of the client bundle, run once, from a machine with both repos checked out side by side:
+
+```bash
+export FLASK_APP=wsgi.py
+flask import-bundled-photos
+```
+
+It uploads each bundled photo to the configured storage, and flips its database row so the API starts returning that photo's real URL instead of leaving the client to resolve it locally. Safe to re-run; it skips photos already migrated. After it finishes, `client/public/images` and `client/src/data/image-manifest.json` are no longer needed by a deployed client — keep them only if you want the site to still work with no backend configured at all.
 
 ## Security notes
 
 - Passwords are hashed with scrypt. The same message and timing is used for a wrong email and a wrong password.
-- The session is a signed cookie (`HttpOnly`, `SameSite=Lax`, 8 hours). It can't be revoked individually. Rotate `SECRET_KEY` to sign everyone out.
+- The session is a signed cookie (`HttpOnly`, 8 hours). `SameSite=Lax` normally; `SameSite=None` (needs HTTPS) when `ALLOWED_ORIGINS` is set, since the cookie then has to cross domains. It can't be revoked individually. Rotate `SECRET_KEY` to sign everyone out.
 - Every state-changing admin request must carry `X-Requested-With: snug-admin` and, when the browser sends one, a matching `Origin`. Other websites can't send that header.
 - Uploads are decoded and re-encoded with Pillow, so the file's real contents are checked and only WebP is written. Limits: JPEG, PNG or WebP, 600px wide or more, 16 MB each, 12 per product.
 - The public API only returns products marked visible.
@@ -95,7 +120,7 @@ Checklist:
 | `app/routes/admin.py` | Product, photo, category and collection endpoints |
 | `app/validation.py` | Input checks, with a message for each field |
 | `app/images.py` | Photo cropping, resizing and storage |
-| `app/cli.py` | `seed`, `create-admin`, `reset-password` |
+| `app/cli.py` | `seed`, `create-admin`, `reset-password`, `import-bundled-photos` |
 | `migrations/` | Database migrations |
 | `seed/catalog.json` | Starter catalog loaded by `flask seed` |
 

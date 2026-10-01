@@ -94,5 +94,55 @@ class LocalStorage:
             (self.dir / self.filename(image_id, width)).unlink(missing_ok=True)
 
 
+class SupabaseStorage:
+    """Stores photos in a Supabase Storage bucket, over its plain REST API."""
+
+    def __init__(self, url, service_key, bucket):
+        self.base = f"{url.rstrip('/')}/storage/v1"
+        self.headers = {"Authorization": f"Bearer {service_key}", "apikey": service_key}
+        self.bucket = bucket
+
+    @staticmethod
+    def filename(image_id, width):
+        return f"{image_id}-{width}.webp"
+
+    def save(self, image_id, files):
+        import urllib.error
+        import urllib.request
+
+        written = []
+        try:
+            for width, blob in files.items():
+                req = urllib.request.Request(
+                    f"{self.base}/object/{self.bucket}/{self.filename(image_id, width)}",
+                    data=blob,
+                    method="POST",
+                    headers={**self.headers, "Content-Type": "image/webp", "x-upsert": "true"},
+                )
+                urllib.request.urlopen(req, timeout=20)
+                written.append(width)
+        except (urllib.error.URLError, OSError):
+            self.delete(image_id, written)
+            raise ApiError(502, "The photo couldn’t be uploaded. Try again.")
+
+    def delete(self, image_id, widths):
+        import urllib.error
+        import urllib.request
+
+        for width in widths or []:
+            req = urllib.request.Request(
+                f"{self.base}/object/{self.bucket}/{self.filename(image_id, width)}",
+                method="DELETE",
+                headers=self.headers,
+            )
+            try:
+                urllib.request.urlopen(req, timeout=20)
+            except (urllib.error.URLError, OSError):
+                pass
+
+
 def get_storage(app):
+    url, key, bucket = app.config["SUPABASE_URL"], app.config["SUPABASE_SERVICE_KEY"], app.config["SUPABASE_BUCKET"]
+    if url and key:
+        return SupabaseStorage(url, key, bucket)
     return LocalStorage(app.config["UPLOAD_DIR"])
