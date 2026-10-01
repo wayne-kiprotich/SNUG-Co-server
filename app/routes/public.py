@@ -6,6 +6,10 @@ from ..serializers import image_registry, product_json, settings_json, taxonomy_
 
 bp = Blueprint("public", __name__, url_prefix="/api")
 
+# Browsers keep it a minute. A CDN in front (Vercel) keeps it too and serves the stale copy
+# instantly while refreshing in the background, so a sleeping server never blocks a visitor.
+PUBLIC_CACHE = "public, max-age=60, s-maxage=60, stale-while-revalidate=604800, stale-if-error=604800"
+
 
 @bp.get("/health")
 def health():
@@ -16,7 +20,7 @@ def health():
 def settings():
     row = db.session.get(SiteSettings, 1)
     response = jsonify(settings_json(row))
-    response.headers["Cache-Control"] = "public, max-age=60"
+    response.headers["Cache-Control"] = PUBLIC_CACHE
     return response
 
 
@@ -40,5 +44,5 @@ def catalog():
             "images": image_registry(image_ids),
         }
     )
-    response.headers["Cache-Control"] = "public, max-age=60"
+    response.headers["Cache-Control"] = PUBLIC_CACHE
     return response

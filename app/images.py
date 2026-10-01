@@ -11,7 +11,7 @@ from PIL import Image, ImageOps, UnidentifiedImageError
 from .errors import ApiError
 
 ALLOWED_FORMATS = {"JPEG", "PNG", "WEBP"}
-WIDTHS = (480, 800, 1080)
+WIDTHS = (480, 800, 1080, 1600)
 RATIO = 4 / 5
 MIN_WIDTH = 600
 Image.MAX_IMAGE_PIXELS = 80_000_000
@@ -59,7 +59,7 @@ def process_image(data, focus_y=0.5):
     for width in widths:
         out = img if width == img.width else img.resize((width, round(width / RATIO)), Image.LANCZOS)
         buf = io.BytesIO()
-        out.save(buf, "WEBP", quality=80, method=4)
+        out.save(buf, "WEBP", quality=82, method=6)
         files[width] = buf.getvalue()
     return widths, files
 
@@ -126,7 +126,13 @@ class SupabaseStorage:
                     f"{self.base}/object/{self.bucket}/{self.filename(image_id, width)}",
                     data=blob,
                     method="POST",
-                    headers={**self.headers, "Content-Type": "image/webp", "x-upsert": "true"},
+                    headers={
+                        **self.headers,
+                        "Content-Type": "image/webp",
+                        "x-upsert": "true",
+                        # File names are random and never reused, so CDNs and browsers can keep them for a year.
+                        "cache-control": "max-age=31536000",
+                    },
                 )
                 urllib.request.urlopen(req, timeout=20, context=_ssl_context())
                 written.append(width)

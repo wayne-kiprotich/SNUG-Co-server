@@ -59,8 +59,10 @@ def logout():
 @bp.get("/me")
 def me():
     admin = current_admin()
+    # 200 with null, not 401: being signed out is a normal answer here, and a 401 shows up
+    # as an error in the browser console on every visit to the sign-in page.
     if admin is None:
-        raise ApiError(401, "Sign in to continue.")
+        return jsonify({"email": None})
     return jsonify({"email": admin.email})
 
 

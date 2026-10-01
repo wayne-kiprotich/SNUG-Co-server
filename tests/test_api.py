@@ -14,7 +14,7 @@ def test_catalog_returns_seeded_products_in_client_shape(client):
     assert p["images"][0]["id"] == "the-black-tracksuit-1"
     assert {"priceKES", "newArrival", "madeToOrder", "sizesNote", "sortOrder"} <= set(p)
     assert "published" not in p  # admin-only field
-    assert client.get("/api/catalog").headers["Cache-Control"] == "public, max-age=60"
+    assert client.get("/api/catalog").headers["Cache-Control"].startswith("public, max-age=60, s-maxage=60")
 
 
 def test_hidden_products_are_not_public(admin):
@@ -31,7 +31,7 @@ def test_hidden_products_are_not_public(admin):
 def test_admin_routes_require_sign_in(client):
     assert client.get("/api/admin/products").status_code == 401
     assert client.post("/api/admin/products", json=NEW_PRODUCT, headers=HEADERS).status_code == 401
-    assert client.get("/api/admin/me").status_code == 401
+    assert client.get("/api/admin/me").get_json() == {"email": None}
 
 
 def test_login_rejects_bad_credentials_with_one_message(client):
@@ -60,7 +60,7 @@ def test_foreign_origin_is_blocked(admin):
 
 def test_logout_ends_the_session(admin):
     assert admin.post("/api/admin/logout", headers=HEADERS).status_code == 200
-    assert admin.get("/api/admin/me").status_code == 401
+    assert admin.get("/api/admin/me").get_json() == {"email": None}
 
 
 def test_change_password(admin, client):
@@ -184,7 +184,8 @@ def test_upload_makes_cropped_webp_sizes_and_registers_them(admin, app):
     images = body["product"]["images"]
     assert len(images) == 2 and images[0]["alt"] == "Test Lounge Set"
     meta = body["images"][images[0]["id"]]
-    assert meta["widths"] == [480, 800, 1080] and meta["height"] == 1350
+    # Cropped to 1200x1500; the full width is kept so large screens stay sharp.
+    assert meta["widths"] == [480, 800, 1080, 1200] and meta["height"] == 1500
     assert meta["base"] == f"/uploads/{images[0]['id']}"
 
     largest = Path(app.config["UPLOAD_DIR"]) / f"{images[0]['id']}-1080.webp"
@@ -392,3 +393,39 @@ def test_homepage_images_set_in_settings(admin):
     assert public["heroImage"] == image_id and public["heroAlt"] == "Two models"
     bad = client.patch("/api/admin/settings", json={"featureImage": "nope"}, headers=HEADERS)
     assert bad.status_code == 422
+
+
+def test_cross_origin_admin_gets_cors_and_cross_site_cookie(tmp_path, monkeypatch):
+    from app import create_app
+    from app.extensions import db
+    from app.models import AdminUser
+    from conftest import ADMIN_EMAIL, ADMIN_PASSWORD
+    from werkzeug.security import generate_password_hash
+
+    site = "https://shop.example.com"
+    monkeypatch.setenv("ALLOWED_ORIGINS", site)
+    app = create_app({"SECRET_KEY": "x", "SQLALCHEMY_DATABASE_URI": f"sqlite:///{tmp_path / 'c.db'}",
+                      "UPLOAD_DIR": str(tmp_path / "up")})
+    with app.app_context():
+        db.create_all()
+        db.session.add(AdminUser(email=ADMIN_EMAIL, password_hash=generate_password_hash(ADMIN_PASSWORD)))
+        db.session.commit()
+    c = app.test_client()
+
+    pre = c.options("/api/admin/login", headers={"Origin": site, "Access-Control-Request-Method": "POST"})
+    assert pre.status_code == 204
+    assert pre.headers["Access-Control-Allow-Origin"] == site
+    assert pre.headers["Access-Control-Allow-Credentials"] == "true"
+    assert "X-Requested-With" in pre.headers["Access-Control-Allow-Headers"]
+
+    evil = c.options("/api/admin/login", headers={"Origin": "https://evil.example"})
+    assert "Access-Control-Allow-Origin" not in evil.headers
+
+    res = c.post("/api/admin/login", json={"email": ADMIN_EMAIL, "password": ADMIN_PASSWORD},
+                 headers={**HEADERS, "Origin": site})
+    assert res.status_code == 200
+    cookie = res.headers["Set-Cookie"]
+    assert "SameSite=None" in cookie and "Secure" in cookie and "HttpOnly" in cookie
+
+    blocked = c.post("/api/admin/logout", headers={**HEADERS, "Origin": "https://evil.example"})
+    assert blocked.status_code == 403
