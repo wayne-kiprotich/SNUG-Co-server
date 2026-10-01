@@ -4,6 +4,7 @@ from pathlib import Path
 import click
 from werkzeug.security import generate_password_hash
 
+from .errors import ApiError
 from .extensions import db
 from .models import AdminUser, Category, Collection, Product, ProductImage
 from .routes.auth import MIN_PASSWORD
@@ -134,7 +135,12 @@ def register_cli(app):
                     break
                 files[width] = path.read_bytes()
             else:
-                storage.save(image.id, files)
+                try:
+                    storage.save(image.id, files)
+                except ApiError as err:
+                    raise click.ClickException(
+                        f"Stopped at {image.id}: {err.message} {done} photos were saved; run the command again to continue."
+                    )
                 image.is_upload = True
                 image.widths, image.width, image.height = meta["widths"], meta["width"], meta["height"]
                 db.session.commit()

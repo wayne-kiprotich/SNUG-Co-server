@@ -6,7 +6,7 @@ from ..extensions import db
 from ..images import get_storage, new_image_id, process_image
 from ..models import Category, Collection, Product, ProductImage, SiteSettings
 from ..security import login_required
-from ..serializers import image_registry, product_json, settings_json, taxonomy_json
+from ..serializers import SETTINGS_IMAGES, image_registry, product_json, settings_json, taxonomy_json
 from ..validation import clean_product, clean_settings, clean_taxonomy, slugify
 
 bp = Blueprint("admin", __name__, url_prefix="/api/admin")
@@ -168,6 +168,8 @@ def delete_product(product_id):
     image_ids = [i.id for i in product.images]
     Category.query.filter(Category.image_id.in_(image_ids)).update({"image_id": None}, synchronize_session=False)
     Collection.query.filter(Collection.image_id.in_(image_ids)).update({"image_id": None}, synchronize_session=False)
+    for column in SETTINGS_IMAGES:
+        SiteSettings.query.filter(getattr(SiteSettings, column).in_(image_ids)).update({column: None}, synchronize_session=False)
     db.session.delete(product)
     db.session.commit()
     storage = get_storage(current_app)
@@ -274,6 +276,8 @@ def delete_image(product_id, image_id):
     is_upload, widths = image.is_upload, image.widths
     Category.query.filter_by(image_id=image_id).update({"image_id": None})
     Collection.query.filter_by(image_id=image_id).update({"image_id": None})
+    for column in SETTINGS_IMAGES:
+        SiteSettings.query.filter(getattr(SiteSettings, column) == image_id).update({column: None})
     db.session.delete(image)
     db.session.flush()
     db.session.expire(product, ["images"])
@@ -395,9 +399,19 @@ def get_settings():
 def update_settings():
     cleaned = clean_settings(request.get_json(silent=True))
     row = get_settings_row()
-    if "announcementText" in cleaned:
-        row.announcement_text = cleaned["announcementText"]
-    if "announcementHref" in cleaned:
-        row.announcement_href = cleaned["announcementHref"]
+    fields = {
+        "announcementText": "announcement_text",
+        "announcementHref": "announcement_href",
+        "heroAlt": "hero_alt",
+        "heroImage": "hero_image",
+        "featureImage": "feature_image",
+        "featureImageSmall": "feature_image_small",
+    }
+    for key, column in fields.items():
+        if key not in cleaned:
+            continue
+        if column in SETTINGS_IMAGES and cleaned[key] and db.session.get(ProductImage, cleaned[key]) is None:
+            raise ValidationError({key: "Choose a photo that exists."})
+        setattr(row, column, cleaned[key])
     db.session.commit()
     return jsonify({"settings": settings_json(row)})

@@ -54,10 +54,21 @@ def product_json(p, admin=False):
     return data
 
 
+SETTINGS_IMAGES = ("hero_image", "feature_image", "feature_image_small")
+
+
 def settings_json(row):
+    if row is None:
+        return {"announcementText": None, "announcementHref": None, "heroImage": None, "heroAlt": None,
+                "featureImage": None, "featureImageSmall": None, "images": {}}
     return {
         "announcementText": row.announcement_text,
         "announcementHref": row.announcement_href,
+        "heroImage": row.hero_image,
+        "heroAlt": row.hero_alt,
+        "featureImage": row.feature_image,
+        "featureImageSmall": row.feature_image_small,
+        "images": image_registry(getattr(row, f) for f in SETTINGS_IMAGES),
     }
 
 

@@ -320,3 +320,75 @@ def test_sitemap_and_robots(client):
     xml = client.get("/sitemap.xml").get_data(as_text=True)
     assert "/product/kenya-bomber-jacket" in xml and "/shop" in xml
     assert "Sitemap:" in client.get("/robots.txt").get_data(as_text=True)
+
+
+def test_supabase_storage_verifies_ssl_and_sends_expected_request(monkeypatch):
+    import ssl
+
+    from app.images import SupabaseStorage
+
+    calls = []
+    monkeypatch.setattr("urllib.request.urlopen", lambda req, timeout=None, context=None: calls.append((req, context)))
+    SupabaseStorage("https://x.supabase.co/", "secret-key", "product-photos").save("kenya-1", {480: b"a", 800: b"b"})
+
+    assert len(calls) == 2
+    req, context = calls[0]
+    assert req.full_url == "https://x.supabase.co/storage/v1/object/product-photos/kenya-1-480.webp"
+    assert req.get_method() == "POST"
+    assert req.get_header("Authorization") == "Bearer secret-key"
+    assert req.get_header("X-upsert") == "true"
+    assert context.verify_mode == ssl.CERT_REQUIRED and context.check_hostname
+
+
+def test_import_bundled_photos_resumes_without_duplicates(app, tmp_path, monkeypatch):
+    import json
+
+    from app.extensions import db
+    from app.images import SupabaseStorage
+    from app.models import ProductImage
+
+    with app.app_context():
+        ids = [i.id for i in ProductImage.query.order_by(ProductImage.id).limit(2)]
+        # Pretend the first photo was migrated by an earlier, interrupted run.
+        first = db.session.get(ProductImage, ids[0])
+        first.is_upload, first.widths, first.width, first.height = True, [480], 480, 600
+        db.session.commit()
+
+    client = tmp_path / "client"
+    (client / "public" / "images").mkdir(parents=True)
+    (client / "src" / "data").mkdir(parents=True)
+    (client / "src" / "data" / "image-manifest.json").write_text(
+        json.dumps({i: {"widths": [480], "width": 480, "height": 600} for i in ids})
+    )
+    for i in ids:
+        (client / "public" / "images" / f"{i}-480.webp").write_bytes(b"x")
+
+    saved = []
+
+    class FakeStorage(SupabaseStorage):
+        def __init__(self):
+            pass
+
+        def save(self, image_id, files):
+            saved.append(image_id)
+
+    monkeypatch.setattr("app.images.get_storage", lambda _app: FakeStorage())
+    runner = app.test_cli_runner()
+    for _ in range(2):
+        result = runner.invoke(args=["import-bundled-photos", "--client-dir", str(client)])
+        assert result.exit_code == 0, result.output
+
+    assert saved == [ids[1]]  # the migrated one is skipped; the second run does nothing
+    with app.app_context():
+        assert db.session.get(ProductImage, ids[1]).is_upload is True
+
+
+def test_homepage_images_set_in_settings(admin):
+    client = admin
+    image_id = client.get("/api/admin/images").get_json()["images"][0]["id"]
+    res = client.patch("/api/admin/settings", json={"heroImage": image_id, "heroAlt": "Two models"}, headers=HEADERS)
+    assert res.status_code == 200
+    public = client.get("/api/settings").get_json()
+    assert public["heroImage"] == image_id and public["heroAlt"] == "Two models"
+    bad = client.patch("/api/admin/settings", json={"featureImage": "nope"}, headers=HEADERS)
+    assert bad.status_code == 422

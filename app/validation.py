@@ -318,6 +318,9 @@ def clean_settings(data, partial=True):
     c = Cleaner(data, partial)
     c.text("announcementText", max_len=200)
     c.link("announcementHref")
+    c.text("heroAlt", max_len=300)
+    for key in ("heroImage", "featureImage", "featureImageSmall"):
+        c.text(key, max_len=80)
     if c.errors:
         raise ValidationError(c.errors)
     return c.out

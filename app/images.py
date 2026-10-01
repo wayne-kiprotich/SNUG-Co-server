@@ -94,6 +94,15 @@ class LocalStorage:
             (self.dir / self.filename(image_id, width)).unlink(missing_ok=True)
 
 
+def _ssl_context():
+    """Verify HTTPS against certifi's CA bundle, so it works the same on macOS and on Render."""
+    import ssl
+
+    import certifi
+
+    return ssl.create_default_context(cafile=certifi.where())
+
+
 class SupabaseStorage:
     """Stores photos in a Supabase Storage bucket, over its plain REST API."""
 
@@ -119,9 +128,13 @@ class SupabaseStorage:
                     method="POST",
                     headers={**self.headers, "Content-Type": "image/webp", "x-upsert": "true"},
                 )
-                urllib.request.urlopen(req, timeout=20)
+                urllib.request.urlopen(req, timeout=20, context=_ssl_context())
                 written.append(width)
-        except (urllib.error.URLError, OSError):
+        except (urllib.error.URLError, OSError) as err:
+            from flask import current_app
+
+            detail = err.read().decode(errors="replace")[:200] if isinstance(err, urllib.error.HTTPError) else err
+            current_app.logger.error("Supabase Storage upload failed: %s", detail)
             self.delete(image_id, written)
             raise ApiError(502, "The photo couldn’t be uploaded. Try again.")
 
@@ -136,7 +149,7 @@ class SupabaseStorage:
                 headers=self.headers,
             )
             try:
-                urllib.request.urlopen(req, timeout=20)
+                urllib.request.urlopen(req, timeout=20, context=_ssl_context())
             except (urllib.error.URLError, OSError):
                 pass
 

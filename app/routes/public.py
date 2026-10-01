@@ -15,7 +15,7 @@ def health():
 @bp.get("/settings")
 def settings():
     row = db.session.get(SiteSettings, 1)
-    response = jsonify(settings_json(row) if row else {"announcementText": None, "announcementHref": None})
+    response = jsonify(settings_json(row))
     response.headers["Cache-Control"] = "public, max-age=60"
     return response
 

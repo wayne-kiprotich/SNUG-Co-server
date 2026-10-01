@@ -101,6 +101,10 @@ class SiteSettings(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     announcement_text = db.Column(db.String(200))
     announcement_href = db.Column(db.String(300))
+    hero_image = db.Column(db.String(80))
+    hero_alt = db.Column(db.String(300))
+    feature_image = db.Column(db.String(80))
+    feature_image_small = db.Column(db.String(80))
     updated_at = db.Column(db.DateTime(timezone=True), default=_now, onupdate=_now, nullable=False)
 
 
