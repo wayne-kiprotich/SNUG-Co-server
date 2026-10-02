@@ -25,6 +25,25 @@ def test_hidden_products_are_not_public(admin):
     assert "zebra-print-set" not in slugs and len(slugs) == 22
 
 
+def test_public_routes_are_cdn_cacheable_and_nothing_else_is(admin, client):
+    # `client` is signed in as the admin here: its session cookie must not ride on cacheable responses.
+    for path in ("/api/settings", "/api/catalog"):
+        res = client.get(path)
+        assert res.headers["Cache-Control"] == "public, max-age=60, s-maxage=60", path
+        assert res.headers["CDN-Cache-Control"] == "public, max-age=60, stale-while-revalidate=604800, stale-if-error=604800"
+        assert "Set-Cookie" not in res.headers, path
+        assert "Cookie" not in res.headers.get("Vary", ""), path
+
+    # Errors, health checks, the bag and admin are never stored by a browser or the CDN.
+    assert client.get("/api/no-such-route").headers["Cache-Control"] == "no-store"
+    assert client.get("/api/health").headers["Cache-Control"] == "no-store"
+    assert "no-store" in client.get("/api/shopper").headers["Cache-Control"]
+    assert admin.get("/api/admin/products").headers["Cache-Control"] == "no-store"
+    assert "Set-Cookie" in admin.get("/api/admin/me").headers  # admin sessions still refresh
+    for res in (client.get("/api/no-such-route"), client.get("/api/health"), client.get("/api/shopper")):
+        assert "CDN-Cache-Control" not in res.headers
+
+
 # ---- Auth and request guards ---------------------------------------------
 
 

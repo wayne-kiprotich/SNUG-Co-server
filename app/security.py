@@ -5,10 +5,25 @@ from functools import wraps
 from urllib.parse import urlparse
 
 from flask import current_app, g, request, session
+from flask.sessions import SecureCookieSessionInterface
 
 from .errors import ApiError
 from .extensions import db
 from .models import AdminUser
+
+class StorefrontSessionInterface(SecureCookieSessionInterface):
+    """Never send the admin session cookie on public storefront responses.
+
+    Flask re-sends a permanent session's cookie on every request. The storefront routes are
+    cached by the CDN, so a signed-in admin's cookie there could be stored and handed to every
+    visitor. Admin and sign-in routes keep the normal behaviour.
+    """
+
+    def save_session(self, app, session, response):
+        if request.blueprint == "public":
+            return
+        super().save_session(app, session, response)
+
 
 SAFE_METHODS = {"GET", "HEAD", "OPTIONS"}
 CSRF_HEADER = "X-Requested-With"

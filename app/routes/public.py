@@ -6,8 +6,11 @@ from ..serializers import image_registry, product_json, settings_json, taxonomy_
 
 bp = Blueprint("public", __name__, url_prefix="/api")
 
-# CDN serves stale copies while refreshing, so a sleeping server never blocks visitors.
-PUBLIC_CACHE = "public, max-age=60, s-maxage=60, stale-while-revalidate=604800, stale-if-error=604800"
+# Browsers keep a copy for a minute. The CDN (Vercel honours CDN-Cache-Control) also serves stale
+# copies while it refreshes, so a sleeping server never blocks visitors. Browsers don't get the
+# stale allowance: a returning visitor never sees prices or pieces older than a minute.
+PUBLIC_CACHE = "public, max-age=60, s-maxage=60"
+CDN_CACHE = "public, max-age=60, stale-while-revalidate=604800, stale-if-error=604800"
 
 
 @bp.get("/health")
@@ -20,6 +23,7 @@ def settings():
     row = db.session.get(SiteSettings, 1)
     response = jsonify(settings_json(row))
     response.headers["Cache-Control"] = PUBLIC_CACHE
+    response.headers["CDN-Cache-Control"] = CDN_CACHE
     return response
 
 
@@ -44,4 +48,5 @@ def catalog():
         }
     )
     response.headers["Cache-Control"] = PUBLIC_CACHE
+    response.headers["CDN-Cache-Control"] = CDN_CACHE
     return response
