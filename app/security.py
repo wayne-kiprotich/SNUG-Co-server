@@ -13,13 +13,19 @@ from .models import AdminUser
 SAFE_METHODS = {"GET", "HEAD", "OPTIONS"}
 CSRF_HEADER = "X-Requested-With"
 CSRF_VALUE = "snug-admin"
+# Other sites can't send a custom header without CORS approval, so it proves the request
+# came from our own pages.
+CSRF_VALUES = {"/api/admin": CSRF_VALUE, "/api/shopper": "snug-shop"}
 
 
 def csrf_guard():
-    """Block admin writes not sent by our own admin page."""
-    if not request.path.startswith("/api/admin") or request.method in SAFE_METHODS:
+    """Block admin and shopper writes not sent by our own pages."""
+    if request.method in SAFE_METHODS:
         return
-    if request.headers.get(CSRF_HEADER) != CSRF_VALUE:
+    expected = next((v for prefix, v in CSRF_VALUES.items() if request.path.startswith(prefix)), None)
+    if expected is None:
+        return
+    if request.headers.get(CSRF_HEADER) != expected:
         raise ApiError(403, "This request was blocked. Reload the admin page and try again.")
     origin = request.headers.get("Origin")
     if origin:

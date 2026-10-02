@@ -18,6 +18,18 @@ ADMIN_PASSWORD = "correct horse battery staple"
 HEADERS = {"X-Requested-With": "snug-admin"}
 
 
+@pytest.fixture(autouse=True)
+def no_real_cloudinary(monkeypatch):
+    """Fail any Cloudinary API call that a test didn't replace with a fake."""
+    import cloudinary.uploader
+
+    def blocked(*args, **kwargs):
+        raise AssertionError("A test tried to call the real Cloudinary API.")
+
+    monkeypatch.setattr(cloudinary.uploader, "call_api", blocked)
+    monkeypatch.setattr(cloudinary.uploader, "call_cacheable_api", blocked)
+
+
 @pytest.fixture()
 def app(tmp_path):
     app = create_app(
@@ -27,6 +39,10 @@ def app(tmp_path):
             "SQLALCHEMY_DATABASE_URI": f"sqlite:///{tmp_path / 'test.db'}",
             "UPLOAD_DIR": str(tmp_path / "uploads"),
             "SESSION_COOKIE_SECURE": False,
+            # Never reach a real Cloudinary account from tests, even if the shell has these set.
+            "CLOUDINARY_CLOUD_NAME": "",
+            "CLOUDINARY_API_KEY": "",
+            "CLOUDINARY_API_SECRET": "",
         }
     )
     with app.app_context():

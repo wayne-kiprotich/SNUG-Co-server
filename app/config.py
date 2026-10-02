@@ -43,10 +43,18 @@ def build_config(overrides=None):
         "SUPABASE_URL": supabase_url,
         "SUPABASE_SERVICE_KEY": supabase_key,
         "SUPABASE_BUCKET": supabase_bucket,
+        # Cloudinary. The cloud name is public (it's in every image URL); the key and secret
+        # stay on the server and are only needed for uploads, deletes and the migration.
+        "CLOUDINARY_CLOUD_NAME": env("CLOUDINARY_CLOUD_NAME") or "",
+        "CLOUDINARY_API_KEY": env("CLOUDINARY_API_KEY") or "",
+        "CLOUDINARY_API_SECRET": env("CLOUDINARY_API_SECRET") or "",
+        # "legacy" serves photos from Supabase Storage / bundled files again (rollback switch).
+        "IMAGE_DELIVERY": (env("IMAGE_DELIVERY") or "cloudinary").lower(),
         # Photo uploads raise this to MAX_UPLOAD_REQUEST_BYTES.
         "MAX_CONTENT_LENGTH": 64 * 1024,
         "MAX_UPLOAD_REQUEST_BYTES": 40 * 1024 * 1024,
-        "MAX_UPLOAD_BYTES": 16 * 1024 * 1024,
+        # Cloudinary's free plan accepts photos up to 10 MB.
+        "MAX_UPLOAD_BYTES": 10 * 1024 * 1024,
         "MAX_IMAGES_PER_PRODUCT": 12,
         "SESSION_COOKIE_NAME": "snug_admin",
         "SESSION_COOKIE_HTTPONLY": True,

@@ -1,9 +1,11 @@
+from collections import namedtuple
+
 from flask import Blueprint, current_app, jsonify, request
 from sqlalchemy import func
 
 from ..errors import ApiError, ValidationError
 from ..extensions import db
-from ..images import get_storage, new_image_id, process_image
+from ..images import PRODUCT_FOLDER, cloudinary_storage, crop_box, get_storage, new_image_id, open_image, process_image
 from ..models import Category, Collection, Product, ProductImage, SiteSettings, with_relations
 from ..security import login_required
 from ..serializers import SETTINGS_IMAGES, image_registry, product_json, settings_json, taxonomy_json
@@ -11,6 +13,10 @@ from ..validation import clean_product, clean_settings, clean_taxonomy, slugify
 
 bp = Blueprint("admin", __name__, url_prefix="/api/admin")
 bp.before_request(login_required(lambda: None))
+
+# The browser's label for the file. A missing label is allowed: the content itself is
+# always checked when the photo is decoded.
+UPLOAD_TYPES = {"image/jpeg", "image/png", "image/webp", "application/octet-stream", ""}
 
 PRODUCT_FIELDS = {
     "name": "name",
@@ -94,6 +100,41 @@ def move_in_order(model, item, direction):
         entry.sort_order = position
 
 
+StoredPhoto = namedtuple("StoredPhoto", "id widths is_upload public_id")
+
+
+def stored_photos(images):
+    """What to remove from storage once these photos' rows are deleted."""
+    return [StoredPhoto(i.id, i.widths, i.is_upload, i.cloudinary_public_id) for i in images]
+
+
+def remove_stored_files(photos):
+    """Run after the delete is committed, so a failure here never leaves a broken row.
+
+    Cloudinary assets are deleted unless another photo still uses them. While Cloudinary is
+    on, Supabase Storage files are left alone: they're the rollback copy.
+    """
+    cloud = cloudinary_storage(current_app)
+    public_ids = {p.public_id for p in photos if p.public_id}
+    if public_ids:
+        in_use = {
+            row[0]
+            for row in db.session.query(ProductImage.cloudinary_public_id).filter(
+                ProductImage.cloudinary_public_id.in_(public_ids)
+            )
+        }
+        for public_id in sorted(public_ids - in_use):
+            if cloud is None:
+                current_app.logger.warning("Cloudinary isn’t configured; %s was not deleted.", public_id)
+            else:
+                cloud.destroy(public_id)
+    if cloud is None:
+        storage = get_storage(current_app)
+        for photo in photos:
+            if photo.is_upload and photo.widths:
+                storage.delete(photo.id, photo.widths)
+
+
 # ---- Products -------------------------------------------------------------
 
 
@@ -164,7 +205,7 @@ def update_product(product_id):
 @bp.delete("/products/<int:product_id>")
 def delete_product(product_id):
     product = get_or_404(Product, product_id, "product")
-    uploads = [(i.id, i.widths) for i in product.images if i.is_upload]
+    photos = stored_photos(product.images)
     image_ids = [i.id for i in product.images]
     Category.query.filter(Category.image_id.in_(image_ids)).update({"image_id": None}, synchronize_session=False)
     Collection.query.filter(Collection.image_id.in_(image_ids)).update({"image_id": None}, synchronize_session=False)
@@ -172,9 +213,7 @@ def delete_product(product_id):
         SiteSettings.query.filter(getattr(SiteSettings, column).in_(image_ids)).update({column: None}, synchronize_session=False)
     db.session.delete(product)
     db.session.commit()
-    storage = get_storage(current_app)
-    for image_id, widths in uploads:
-        storage.delete(image_id, widths)
+    remove_stored_files(photos)
     return jsonify({"ok": True})
 
 
@@ -207,39 +246,84 @@ def upload_images(product_id):
     except ValueError:
         focus = 0.4
 
-    storage = get_storage(current_app)
+    cloud = cloudinary_storage(current_app)
     max_bytes = current_app.config["MAX_UPLOAD_BYTES"]
     prepared = []
+    # Check every file before storing any, so a bad one in a batch saves nothing.
     for upload in files:
+        if upload.mimetype not in UPLOAD_TYPES:
+            raise ApiError(415, f"“{upload.filename}” isn’t a JPEG, PNG or WebP photo.")
         data = upload.read(max_bytes + 1)
         if len(data) > max_bytes:
             raise ApiError(413, f"“{upload.filename}” is over {max_bytes // (1024 * 1024)} MB.")
         try:
-            widths, blobs = process_image(data, focus)
+            if cloud:
+                _, size = open_image(data)
+                prepared.append((data, crop_box(*size, focus)))
+            else:
+                prepared.append(process_image(data, focus))
         except ApiError as err:
             raise ApiError(err.status, f"“{upload.filename}”: {err.message}")
-        prepared.append((widths, blobs))
 
     position = max((i.position for i in product.images), default=-1) + 1
-    for widths, blobs in prepared:
-        image_id = new_image_id()
-        storage.save(image_id, blobs)
-        width = max(widths)
-        db.session.add(
-            ProductImage(
-                id=image_id,
-                product=product,
-                position=position,
-                alt=product.name,
-                is_upload=True,
-                widths=widths,
-                width=width,
-                height=round(width * 5 / 4),
+    if cloud:
+        save_to_cloudinary(cloud, product, prepared, position)
+    else:
+        storage = get_storage(current_app)
+        for widths, blobs in prepared:
+            image_id = new_image_id()
+            storage.save(image_id, blobs)
+            width = max(widths)
+            db.session.add(
+                ProductImage(
+                    id=image_id,
+                    product=product,
+                    position=position,
+                    alt=product.name,
+                    is_upload=True,
+                    widths=widths,
+                    width=width,
+                    height=round(width * 5 / 4),
+                )
             )
-        )
-        position += 1
-    db.session.commit()
+            position += 1
+        db.session.commit()
     return jsonify(product_payload(product)), 201
+
+
+def save_to_cloudinary(cloud, product, prepared, position):
+    """Upload originals, then save their rows. On any failure, nothing is kept."""
+    uploaded = []
+    try:
+        for data, (x, y, w, h) in prepared:
+            image_id = new_image_id()
+            asset = cloud.upload(data, PRODUCT_FOLDER, image_id)
+            uploaded.append(asset["public_id"])
+            db.session.add(
+                ProductImage(
+                    id=image_id,
+                    product=product,
+                    position=position,
+                    alt=product.name,
+                    is_upload=True,
+                    width=w,
+                    height=h,
+                    crop_x=x,
+                    crop_y=y,
+                    cloudinary_public_id=asset["public_id"],
+                    cloudinary_version=asset["version"],
+                )
+            )
+            position += 1
+        db.session.commit()
+    except Exception as err:
+        db.session.rollback()
+        for public_id in uploaded:
+            cloud.destroy(public_id)
+        if isinstance(err, ApiError):
+            raise
+        current_app.logger.exception("Saving uploaded photos failed")
+        raise ApiError(500, "The photos couldn’t be saved. Try again.")
 
 
 @bp.patch("/products/<int:product_id>/images/<image_id>")
@@ -274,7 +358,7 @@ def delete_image(product_id, image_id):
     if image is None:
         raise ApiError(404, "That photo doesn’t exist.")
     product = image.product
-    is_upload, widths = image.is_upload, image.widths
+    photos = stored_photos([image])
     Category.query.filter_by(image_id=image_id).update({"image_id": None})
     Collection.query.filter_by(image_id=image_id).update({"image_id": None})
     for column in SETTINGS_IMAGES:
@@ -285,8 +369,7 @@ def delete_image(product_id, image_id):
     for position, remaining in enumerate(product.images):
         remaining.position = position
     db.session.commit()
-    if is_upload:
-        get_storage(current_app).delete(image_id, widths)
+    remove_stored_files(photos)
     return jsonify(product_payload(product))
 
 

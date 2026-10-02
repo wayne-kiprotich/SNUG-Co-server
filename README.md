@@ -82,21 +82,44 @@ If the client is a separate app (its own repo, its own host — Vercel, Netlify,
 - Only if the browser calls this API's own domain directly (no proxy): set `SESSION_COOKIE_SAMESITE=None` and `VITE_API_URL` to the full API address. Both sites must use HTTPS.
 - Photos need a store reachable by URL regardless of which host serves them — see Supabase Storage below. A local disk only serves photos on the same host that saved them.
 
-## Storing photos: local disk or Supabase Storage
+## Storing photos: Cloudinary
 
-Photos are files, written at a few widths after upload. `app/images.py` has two storage backends with the same `save`/`delete` interface:
+New photos go to **Cloudinary** when `CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY` and `CLOUDINARY_API_SECRET` are set (server-side only: never in the client, Vercel or git). The admin uploads to this server as before; the server checks the session and the file, uploads the untouched original to `snug-co/products/<photo id>` as a *private* asset, and saves its `public_id`, version and 4:5 crop in `product_images`. The original (which may carry camera GPS data) is only reachable with a signed URL; the public, metadata-free copies are generated on demand:
 
-- **Local disk** (default): fine for one machine, or a Render service with a persistent disk. Render's *free* tier has no persistent disk — anything saved there is lost on the next deploy or restart.
-- **Supabase Storage**: set `SUPABASE_URL`, `SUPABASE_SERVICE_KEY` (the service_role key, not anon — Project Settings → API) and `SUPABASE_BUCKET` (create it first: Storage → New bucket → Public bucket on). Photos are then durable regardless of Render's plan, and reachable from any host, which is what cross-domain deployment needs anyway.
+```
+https://res.cloudinary.com/<cloud>/image/private/c_crop,h_1500,w_1200,x_0,y_120/f_auto,q_auto,c_limit,w_{w}/v<version>/snug-co/products/<id>
+```
 
-The storefront's 23 seeded products point at photos that ship inside the *client's* repo (`client/public/images`), not this one. Those never touch this server unless you move them. To make every photo come from this API instead of the client bundle, run once, from a machine with both repos checked out side by side:
+The API sends that URL with `{w}` left in; the client fills in the widths for its `srcset`. Every new upload gets a new public ID and the version is in the URL, so CDN copies are cached for good and never go stale. Deleting a photo in the admin deletes the Cloudinary asset (with a CDN purge) unless another row still uses it.
+
+Without the Cloudinary variables, photos are written at a few WebP widths to Supabase Storage (`SUPABASE_URL`, `SUPABASE_SERVICE_KEY`, `SUPABASE_BUCKET`) or else local disk, as before Cloudinary.
+
+### Moving existing photos
 
 ```bash
 export FLASK_APP=wsgi.py
-flask import-bundled-photos
+flask migrate-images-to-cloudinary --dry-run     # what would be copied
+flask migrate-images-to-cloudinary --limit 3     # a trial batch
+flask migrate-images-to-cloudinary               # the rest
 ```
 
-It uploads each bundled photo to the configured storage, and flips its database row so the API starts returning that photo's real URL instead of leaving the client to resolve it locally. Safe to re-run; it skips photos already migrated. After it finishes, `client/public/images` and `client/src/data/image-manifest.json` are no longer needed by a deployed client — keep them only if you want the site to still work with no backend configured at all.
+It copies the largest stored size of each photo (Supabase Storage, local disk, or the client's bundled files via `--client-dir`) into Cloudinary, checks that a resized copy is served, then saves the asset details on that row only. It never deletes anything and never overwrites an asset, so it can be stopped and re-run: finished photos are skipped and a half-finished one reuses its existing asset. The old `is_upload`/`widths` columns are kept.
+
+**Rollback:** set `IMAGE_DELIVERY=legacy` and the API serves the old Supabase/bundled copies again for every photo that has one (photos uploaded after the switch only exist in Cloudinary). Unset the three Cloudinary variables to send new uploads back to Supabase Storage. While Cloudinary is on, Supabase Storage files are never deleted.
+
+## Wishlist and cart
+
+Shoppers don't sign in. Their wishlist and cart live in a signed `snug_shopper` cookie (HttpOnly, Secure in production, SameSite=Lax, 90 days, sent only to `/api/shopper`). It holds product ids and choices, nothing personal. Every read checks the ids against the catalog, so hidden or deleted products drop out. Limits: 60 saved pieces, 20 cart lines, 10 of each.
+
+| Method | Path | |
+| --- | --- | --- |
+| GET | `/api/shopper` | `{wishlist: [id], cart: [{key, productId, color, size, options, quantity}]}` |
+| PUT / DELETE | `/api/shopper/wishlist/<id>` | Save or remove a piece |
+| POST | `/api/shopper/cart` | Add `{productId, color, size, options, quantity}`; same choices add up |
+| PATCH / DELETE | `/api/shopper/cart/<key>` | Change quantity or remove a line |
+| DELETE | `/api/shopper/cart` | Empty the cart |
+
+Writes need `X-Requested-With: snug-shop` (and an allowed `Origin`), like the admin. Responses are `private, no-store`. Checkout is still WhatsApp: the client's bag page sends the whole cart as one message.
 
 ## Security notes
 
@@ -105,7 +128,7 @@ It uploads each bundled photo to the configured storage, and flips its database 
 - Sign-in attempts are limited per browser: one that has signed in before carries a signed device cookie and has its own limit, so someone hammering the login from a shared proxy address can't lock the owner out.
 - Requests are capped at 64 KB, except photo uploads (40 MB). Photos over 40 megapixels (PNG/WebP) are rejected before decoding; large JPEGs are decoded at reduced size.
 - Every state-changing admin request must carry `X-Requested-With: snug-admin` and, when the browser sends one, a matching `Origin`. Other websites can't send that header.
-- Uploads are decoded and re-encoded with Pillow, so the file's real contents are checked and only WebP is written. Limits: JPEG, PNG or WebP, 600px wide or more, 16 MB each, 12 per product.
+- Uploads are fully decoded with Pillow before anything is stored, so the file's real contents are checked, whatever its name or type says. Limits: JPEG, PNG or WebP, 600px wide or more, 10 MB each (Cloudinary's free-plan limit), 12 per product. Only signed-in admins can upload or delete; Cloudinary credentials never leave this server.
 - The public API only returns products marked visible.
 
 ## Not built

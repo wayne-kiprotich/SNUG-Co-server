@@ -125,8 +125,21 @@ class ProductImage(db.Model):
     position = db.Column(db.Integer, default=0, nullable=False)
     alt = db.Column(db.String(300), default="", nullable=False)
     is_upload = db.Column(db.Boolean, default=False, nullable=False)
+    # Sizes stored in Supabase Storage or local disk (before Cloudinary). Kept for rollback.
     widths = db.Column(db.JSON)
+    # Size of the 4:5 photo as shown.
     width = db.Column(db.Integer)
     height = db.Column(db.Integer)
+    cloudinary_public_id = db.Column(db.String(255), index=True)
+    cloudinary_version = db.Column(db.BigInteger)
+    # Top-left of the 4:5 crop inside the Cloudinary original (null: the original is already 4:5).
+    crop_x = db.Column(db.Integer)
+    crop_y = db.Column(db.Integer)
+
+    @property
+    def crop(self):
+        if self.crop_x is None or self.crop_y is None:
+            return None
+        return self.crop_x, self.crop_y, self.width, self.height
 
     product = db.relationship("Product", back_populates="images")

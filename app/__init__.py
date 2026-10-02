@@ -11,7 +11,7 @@ from .cli import register_cli
 from .config import BASE_DIR, build_config
 from .errors import register_errors
 from .extensions import db, migrate
-from .routes import admin, auth, public
+from .routes import admin, auth, public, shopper
 from .security import csrf_guard
 
 
@@ -55,6 +55,7 @@ def create_app(test_config=None):
     app.register_blueprint(public.bp)
     app.register_blueprint(auth.bp)
     app.register_blueprint(admin.bp)
+    app.register_blueprint(shopper.bp)
 
     @app.get("/uploads/<path:filename>")
     def uploads(filename):
@@ -69,7 +70,7 @@ def create_app(test_config=None):
 
     @app.get("/robots.txt")
     def robots():
-        body = f"User-agent: *\nAllow: /\nDisallow: /admin\nDisallow: /api\n\nSitemap: {site_url()}/sitemap.xml\n"
+        body = f"User-agent: *\nAllow: /\nDisallow: /admin\nDisallow: /api\nDisallow: /cart\nDisallow: /wishlist\n\nSitemap: {site_url()}/sitemap.xml\n"
         return app.response_class(body, mimetype="text/plain")
 
     @app.get("/sitemap.xml")

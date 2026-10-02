@@ -1,22 +1,50 @@
 """Database rows to client JSON."""
 
 from flask import current_app
+from sqlalchemy import or_
 
+from .images import cloudinary_template
 from .models import ProductImage
 
 
 def image_meta(image):
-    base = f"{current_app.config['UPLOAD_URL_BASE']}/{image.id}"
-    return {"widths": image.widths, "width": image.width, "height": image.height, "base": base}
+    """How the client loads a photo, or None to use the client's bundled copy.
+
+    Cloudinary photos get {width, height, src}, where src has {w} for the width.
+    Older photos get {widths, width, height, base} for files named base-<width>.webp.
+    """
+    cfg = current_app.config
+    legacy = None
+    if image.is_upload and image.widths:
+        legacy = {
+            "widths": image.widths,
+            "width": image.width,
+            "height": image.height,
+            "base": f"{cfg['UPLOAD_URL_BASE']}/{image.id}",
+        }
+    if cfg["IMAGE_DELIVERY"] == "legacy" and (legacy or not image.is_upload):
+        return legacy
+    if image.cloudinary_public_id and cfg["CLOUDINARY_CLOUD_NAME"]:
+        return {
+            "width": image.width,
+            "height": image.height,
+            "src": cloudinary_template(
+                cfg["CLOUDINARY_CLOUD_NAME"], image.cloudinary_public_id, image.cloudinary_version, image.crop
+            ),
+        }
+    return legacy
 
 
 def image_registry(image_ids):
-    """Metadata for uploaded images. The client resolves bundled ones."""
+    """Metadata for stored images. The client resolves bundled ones."""
     ids = {i for i in image_ids if i}
     if not ids:
         return {}
-    rows = ProductImage.query.filter(ProductImage.id.in_(ids), ProductImage.is_upload.is_(True)).all()
-    return {row.id: image_meta(row) for row in rows}
+    rows = ProductImage.query.filter(
+        ProductImage.id.in_(ids), or_(ProductImage.is_upload.is_(True), ProductImage.cloudinary_public_id.isnot(None))
+    ).all()
+    registry = {row.id: image_meta(row) for row in rows}
+    return {key: meta for key, meta in registry.items() if meta}
 
 
 def product_json(p, admin=False):

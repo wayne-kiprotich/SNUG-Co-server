@@ -5,3 +5,4 @@ Pillow>=11
 python-dotenv>=1.0
 gunicorn>=23
 certifi>=2024.2.2
+cloudinary>=1.41,<2
