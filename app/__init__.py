@@ -12,7 +12,7 @@ from .config import BASE_DIR, build_config
 from .errors import register_errors
 from .extensions import db, migrate
 from .routes import admin, auth, public, shopper
-from .security import csrf_guard
+from .security import StorefrontSessionInterface, csrf_guard
 
 
 @event.listens_for(Engine, "connect")
@@ -28,6 +28,7 @@ def create_app(test_config=None):
         load_dotenv(BASE_DIR / ".env")
     app = Flask(__name__)
     app.config.update(build_config(test_config))
+    app.session_interface = StorefrontSessionInterface()
 
     if not app.config["SECRET_KEY"]:
         raise RuntimeError(
@@ -111,8 +112,14 @@ def create_app(test_config=None):
     @app.after_request
     def security_headers(response):
         response.headers.setdefault("X-Content-Type-Options", "nosniff")
-        if request.path.startswith("/api/admin"):
-            response.headers["Cache-Control"] = "no-store"
+        if request.path.startswith("/api/"):
+            # Vercel's CDN caches what the API marks cacheable. Only the public storefront routes
+            # opt in; everything else (admin, sign-in, bag, errors) is never stored anywhere.
+            if request.path.startswith("/api/admin") or "Cache-Control" not in response.headers:
+                response.headers["Cache-Control"] = "no-store"
+            if "Set-Cookie" in response.headers and "public" in response.headers["Cache-Control"]:
+                response.headers["Cache-Control"] = "private, no-store"
+                response.headers.pop("CDN-Cache-Control", None)
         origin = request.headers.get("Origin")
         if origin in allowed_origins:
             response.headers["Access-Control-Allow-Origin"] = origin

@@ -25,6 +25,87 @@ def test_hidden_products_are_not_public(admin):
     assert "zebra-print-set" not in slugs and len(slugs) == 22
 
 
+SUMMARY_FIELDS = {
+    "id", "slug", "name", "category", "collections", "description", "priceKES", "images", "sizes", "tags",
+    "availability", "badge", "featured", "newArrival", "recency", "sortOrder",
+}
+TAXONOMY_FIELDS = {"id", "name", "slug", "description", "image", "sortOrder"}
+
+
+def hide(admin, slug):
+    products = admin.get("/api/admin/products").get_json()["products"]
+    pid = next(p["id"] for p in products if p["slug"] == slug)
+    assert admin.patch(f"/api/admin/products/{pid}", json={"published": False}, headers=HEADERS).status_code == 200
+
+
+def test_home_returns_only_what_the_home_page_shows(client):
+    data = client.get("/api/home").get_json()
+    assert set(data) == {"newArrivals", "hisAndHers", "categories", "images"}
+    assert 0 < len(data["newArrivals"]) <= 4 and all(p["newArrival"] for p in data["newArrivals"])
+    assert len(data["hisAndHers"]) == 2 and all("his-and-hers" in p["collections"] for p in data["hisAndHers"])
+    for p in data["newArrivals"] + data["hisAndHers"]:
+        assert set(p) == SUMMARY_FIELDS and len(p["images"]) <= 2
+    assert data["categories"] and all(c["productCount"] > 0 for c in data["categories"])
+    assert all(set(c) == TAXONOMY_FIELDS | {"productCount"} for c in data["categories"])
+
+
+def test_products_listing_is_card_sized(client):
+    data = client.get("/api/products").get_json()
+    assert set(data) == {"products", "categories", "collections", "images"}
+    assert len(data["products"]) == 23
+    assert all(set(p) == SUMMARY_FIELDS for p in data["products"])
+    assert all(set(c) == TAXONOMY_FIELDS for c in data["categories"] + data["collections"])
+
+
+def test_product_detail_has_the_full_product_and_related_pieces(client):
+    data = client.get("/api/products/kenya-bomber-jacket").get_json()
+    assert set(data) == {"product", "category", "related", "images"}
+    assert data["product"]["slug"] == "kenya-bomber-jacket" and "details" in data["product"]
+    assert not {"published", "updatedAt"} & set(data["product"])  # admin-only fields
+    assert data["category"]["slug"] == data["product"]["category"] and set(data["category"]) == TAXONOMY_FIELDS
+    assert 0 < len(data["related"]) <= 4 and "kenya-bomber-jacket" not in [p["slug"] for p in data["related"]]
+    assert all(set(p) == SUMMARY_FIELDS for p in data["related"])
+    assert "kenya" in data["related"][0]["collections"]  # same collection ranks first
+
+
+def test_hidden_products_stay_out_of_every_storefront_route(admin, client):
+    hidden = client.get("/api/products/kenya-cosy-jersey").get_json()
+    hidden_images = {i["id"] for i in hidden["product"]["images"]}
+    hide(admin, "kenya-cosy-jersey")
+
+    res = client.get("/api/products/kenya-cosy-jersey")
+    assert res.status_code == 404 and res.get_json() == {"error": "That piece isn't available."}
+    assert client.get("/api/products/no-such-piece").status_code == 404
+    responses = [
+        client.get("/api/home").get_json(),
+        client.get("/api/products").get_json(),
+        client.get("/api/products/kenya-bomber-jacket").get_json(),
+    ]
+    text = str(responses)
+    assert "kenya-cosy-jersey" not in text.replace("kenya-cosy-jersey-", "")  # image ids share the prefix
+    for data in responses:
+        assert not hidden_images & set(data["images"])
+
+
+def test_public_routes_are_cdn_cacheable_and_nothing_else_is(admin, client):
+    # `client` is signed in as the admin here: its session cookie must not ride on cacheable responses.
+    for path in ("/api/settings", "/api/catalog", "/api/home", "/api/products", "/api/products/kenya-bomber-jacket"):
+        res = client.get(path)
+        assert res.headers["Cache-Control"] == "public, max-age=60, s-maxage=60", path
+        assert res.headers["CDN-Cache-Control"] == "public, max-age=60, stale-while-revalidate=604800, stale-if-error=604800"
+        assert "Set-Cookie" not in res.headers, path
+        assert "Cookie" not in res.headers.get("Vary", ""), path
+
+    # Errors, health checks, the bag and admin are never stored by a browser or the CDN.
+    assert client.get("/api/products/no-such-piece").headers["Cache-Control"] == "no-store"
+    assert client.get("/api/health").headers["Cache-Control"] == "no-store"
+    assert "no-store" in client.get("/api/shopper").headers["Cache-Control"]
+    assert admin.get("/api/admin/products").headers["Cache-Control"] == "no-store"
+    assert "Set-Cookie" in admin.get("/api/admin/me").headers  # admin sessions still refresh
+    for res in (client.get("/api/products/no-such-piece"), client.get("/api/health"), client.get("/api/shopper")):
+        assert "CDN-Cache-Control" not in res.headers
+
+
 # ---- Auth and request guards ---------------------------------------------
 
 
@@ -501,11 +582,12 @@ def test_catalog_uses_a_fixed_number_of_queries(app, client):
 
     with app.app_context():
         engine = db.engine
-    count = []
-    listener = lambda *a, **k: count.append(1)
-    event.listen(engine, "before_cursor_execute", listener)
-    try:
-        client.get("/api/catalog")
-    finally:
-        event.remove(engine, "before_cursor_execute", listener)
-    assert len(count) <= 8, f"{len(count)} queries; each is a slow round trip in production"
+    for path in ("/api/catalog", "/api/home", "/api/products", "/api/products/kenya-bomber-jacket"):
+        count = []
+        listener = lambda *a, **k: count.append(1)
+        event.listen(engine, "before_cursor_execute", listener)
+        try:
+            assert client.get(path).status_code == 200
+        finally:
+            event.remove(engine, "before_cursor_execute", listener)
+        assert len(count) <= 8, f"{path}: {len(count)} queries; each is a slow round trip in production"

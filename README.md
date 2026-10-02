@@ -142,7 +142,7 @@ Writes need `X-Requested-With: snug-shop` (and an allowed `Origin`), like the ad
 | Path | What it holds |
 | --- | --- |
 | `app/models.py` | Tables: products, images, categories, collections, admin users |
-| `app/routes/public.py` | `GET /api/catalog` for the storefront |
+| `app/routes/public.py` | Storefront data, one request per page: `/api/home`, `/api/products` (card-sized list), `/api/products/<slug>`, `/api/settings`. `/api/catalog` (everything) stays for older builds. All are CDN-cacheable for 60s, served stale while refreshing. |
 | `app/routes/auth.py` | Sign in, sign out and change password |
 | `app/routes/admin.py` | Product, photo, category and collection endpoints |
 | `app/validation.py` | Input checks, with a message for each field |

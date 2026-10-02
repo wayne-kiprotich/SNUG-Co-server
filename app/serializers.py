@@ -82,7 +82,29 @@ def product_json(p, admin=False):
     return data
 
 
-SETTINGS_IMAGES = ("hero_image", "feature_image", "feature_image_small")
+def product_summary(p):
+    """What a product card, search and the bag need: no ordering details, first two photos only."""
+    return {
+        "id": f"p{p.id}",
+        "slug": p.slug,
+        "name": p.name,
+        "category": p.category.slug,
+        "collections": [c.slug for c in p.collections],
+        "description": p.description,
+        "priceKES": p.price_kes,
+        "images": [{"id": i.id, "alt": i.alt} for i in p.images[:2]],
+        "sizes": p.sizes or None,
+        "tags": p.tags or [],
+        "availability": p.availability,
+        "badge": p.badge,
+        "featured": p.featured,
+        "newArrival": p.new_arrival,
+        "recency": p.recency,
+        "sortOrder": p.sort_order,
+    }
+
+
+SETTINGS_IMAGES =("hero_image", "feature_image", "feature_image_small")
 
 
 def settings_json(row):
