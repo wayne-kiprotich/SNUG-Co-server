@@ -13,7 +13,7 @@ from app.extensions import db
 from app.images import cloudinary_template, cloudinary_url
 from app.models import Category, ProductImage
 
-from conftest import ADMIN_EMAIL, ADMIN_PASSWORD, HEADERS, NEW_PRODUCT, photo
+from conftest import ADMIN_EMAIL, ADMIN_PASSWORD, HEADERS, NEW_PRODUCT, PROD_SECRET, photo
 
 CLOUD = {"CLOUDINARY_CLOUD_NAME": "snug-test", "CLOUDINARY_API_KEY": "key-123", "CLOUDINARY_API_SECRET": "secret-456"}
 
@@ -287,6 +287,11 @@ def test_catalog_serves_cloudinary_photos_and_the_rollback_switch(app, admin, cl
     assert "f_auto,q_auto,c_limit,w_{w}" in images[legacy_id]["src"]
     assert "c_crop" not in images[legacy_id]["src"]  # already 4:5
     assert "the-black-tracksuit-1" not in images  # not migrated: the client's bundled copy is used
+    # The page-sized routes build the same entries from the photo rows they already loaded.
+    for path in ("/api/products", "/api/home", "/api/products/green-tracksuit"):
+        registry = client.get(path).get_json()["images"]
+        assert registry["green-tracksuit-1"] == images["green-tracksuit-1"], path
+        assert "the-black-tracksuit-1" not in registry, path
 
     app.config["IMAGE_DELIVERY"] = "legacy"
     images = client.get("/api/catalog").get_json()["images"]
@@ -397,7 +402,7 @@ def test_production_session_cookie_is_secure(tmp_path):
     from app import create_app
 
     prod = create_app(
-        {"SECRET_KEY": "x", "SQLALCHEMY_DATABASE_URI": f"sqlite:///{tmp_path / 'p.db'}", "UPLOAD_DIR": str(tmp_path / "up"),
+        {"SECRET_KEY": PROD_SECRET, "SQLALCHEMY_DATABASE_URI": f"sqlite:///{tmp_path / 'p.db'}", "UPLOAD_DIR": str(tmp_path / "up"),
          "DEBUG": False, "CLOUDINARY_CLOUD_NAME": "", "CLOUDINARY_API_KEY": "", "CLOUDINARY_API_SECRET": ""}
     )
     assert prod.config["SESSION_COOKIE_SECURE"] is True
@@ -416,3 +421,22 @@ def test_production_session_cookie_is_secure(tmp_path):
     cookie = next(c for c in res.headers.getlist("Set-Cookie") if c.startswith("snug_admin="))
     assert "Secure" in cookie and "HttpOnly" in cookie and "SameSite=Lax" in cookie
     assert "Expires=" in cookie  # 8-hour session, not a forever cookie
+
+
+def test_development_never_deletes_live_photos(app, cloud_admin, fake_cloud):
+    # A live photo, then the same database used by a development server with the live keys
+    # (a restored backup, say).
+    pid = new_product(cloud_admin)
+    res = cloud_admin.post(f"/api/admin/products/{pid}/images", data={"files": (photo(), "1.jpg")}, headers=HEADERS)
+    live = res.get_json()["product"]["images"][0]["id"]
+    app.config["CLOUDINARY_FOLDER"] = "snug-co-dev"
+
+    cloud_admin.delete(f"/api/admin/products/{pid}/images/{live}", headers=HEADERS)
+    assert fake_cloud.destroyed == []
+    assert f"snug-co/products/{live}" in fake_cloud.assets
+
+    res = cloud_admin.post(f"/api/admin/products/{pid}/images", data={"files": (photo(), "2.jpg")}, headers=HEADERS)
+    dev = res.get_json()["product"]["images"][0]["id"]
+    assert fake_cloud.uploads[-1]["folder"] == "snug-co-dev/products"
+    cloud_admin.delete(f"/api/admin/products/{pid}/images/{dev}", headers=HEADERS)
+    assert [d[0] for d in fake_cloud.destroyed] == [f"snug-co-dev/products/{dev}"]

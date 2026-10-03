@@ -124,10 +124,17 @@ def _ssl_context():
     return ssl.create_default_context(cafile=certifi.where())
 
 
-# Cloudinary layout: snug-co/products, snug-co/categories, snug-co/homepage.
-# Covers and homepage photos are picked from product photos, so only products is used today.
-CLOUDINARY_ROOT = "snug-co"
-PRODUCT_FOLDER = f"{CLOUDINARY_ROOT}/products"
+# Cloudinary layout: <root>/products, where the root is CLOUDINARY_FOLDER ("snug-co" live,
+# "snug-co-dev" in development). Covers and homepage photos are picked from product photos.
+def product_folder(app):
+    return f"{app.config['CLOUDINARY_FOLDER']}/products"
+
+
+def owned_by(app, public_id):
+    """True if the asset is in this mode's folder, so this server may delete it."""
+    return public_id.startswith(f"{app.config['CLOUDINARY_FOLDER']}/")
+
+
 # Private: the original (with any camera GPS data) needs a signed URL. Resized copies are public
 # and Cloudinary strips their metadata.
 CLOUDINARY_TYPE = "private"

@@ -16,6 +16,8 @@ SEED = Path(__file__).resolve().parent.parent / "seed" / "catalog.json"
 ADMIN_EMAIL = "owner@example.com"
 ADMIN_PASSWORD = "correct horse battery staple"
 HEADERS = {"X-Requested-With": "snug-admin"}
+# Long enough for a production (non-debug, non-testing) app.
+PROD_SECRET = "p" * 48
 
 
 @pytest.fixture(autouse=True)

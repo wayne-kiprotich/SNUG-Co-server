@@ -1,3 +1,4 @@
+import os
 from pathlib import Path
 
 from dotenv import load_dotenv
@@ -8,11 +9,14 @@ from sqlalchemy.engine import Engine
 from werkzeug.middleware.proxy_fix import ProxyFix
 
 from .cli import register_cli
-from .config import BASE_DIR, build_config
+from .config import BASE_DIR, build_config, remote_database_host
 from .errors import register_errors
 from .extensions import db, migrate
 from .routes import admin, auth, public, shopper
-from .security import StorefrontSessionInterface, csrf_guard
+from .security import AdminSessionInterface, csrf_guard
+
+# Shorter keys are guessable, and a known key lets anyone forge an admin session.
+MIN_SECRET_KEY = 32
 
 
 @event.listens_for(Engine, "connect")
@@ -28,11 +32,26 @@ def create_app(test_config=None):
         load_dotenv(BASE_DIR / ".env")
     app = Flask(__name__)
     app.config.update(build_config(test_config))
-    app.session_interface = StorefrontSessionInterface()
+    app.session_interface = AdminSessionInterface()
 
     if not app.config["SECRET_KEY"]:
         raise RuntimeError(
             "SECRET_KEY is not set. Copy .env.example to .env and set it to a long random value."
+        )
+    if not (app.debug or app.testing) and len(app.config["SECRET_KEY"]) < MIN_SECRET_KEY:
+        raise RuntimeError(
+            f"SECRET_KEY must be at least {MIN_SECRET_KEY} characters outside development. "
+            'Generate one with: python3 -c "import secrets; print(secrets.token_urlsafe(48))"'
+        )
+    if app.debug and os.environ.get("RENDER"):
+        raise RuntimeError("FLASK_DEBUG=1 is for local development only. Remove it from Render's environment.")
+    # Render sets RENDER. Anywhere else, a database on another machine is most likely the live
+    # one, so it needs an explicit opt-in for each run.
+    remote_host = remote_database_host(app.config["SQLALCHEMY_DATABASE_URI"])
+    if remote_host and not (os.environ.get("RENDER") or os.environ.get("ALLOW_REMOTE_DATABASE") == "1"):
+        raise RuntimeError(
+            f"DATABASE_URL points at {remote_host}, which may be the live database. Leave DATABASE_URL "
+            "empty to use local SQLite, or run with ALLOW_REMOTE_DATABASE=1 if you really mean to use it."
         )
     if app.config["TRUSTED_PROXIES"]:
         n = app.config["TRUSTED_PROXIES"]
@@ -112,6 +131,11 @@ def create_app(test_config=None):
     @app.after_request
     def security_headers(response):
         response.headers.setdefault("X-Content-Type-Options", "nosniff")
+        # Nothing here is meant to be framed; this blocks clickjacking of the admin when Flask
+        # serves the site itself. Vercel sends the same headers for its own pages.
+        response.headers.setdefault("X-Frame-Options", "DENY")
+        response.headers.setdefault("Content-Security-Policy", "frame-ancestors 'none'")
+        response.headers.setdefault("Referrer-Policy", "strict-origin-when-cross-origin")
         if request.path.startswith("/api/"):
             # Vercel's CDN caches what the API marks cacheable. Only the public storefront routes
             # opt in; everything else (admin, sign-in, bag, errors) is never stored anywhere.

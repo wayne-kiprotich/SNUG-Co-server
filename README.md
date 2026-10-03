@@ -30,6 +30,8 @@ export FLASK_APP=wsgi.py
 .venv/bin/flask run --port 5000
 ```
 
+`.env.example` is a development setup (`FLASK_DEBUG=1`): a local SQLite database in `instance/snug.db`, photos on disk or in the `snug-co-dev` Cloudinary folder. Outside Render, the server refuses a `DATABASE_URL` on another machine, because that is most likely the live database. To run one command against it on purpose, prefix it with `ALLOW_REMOTE_DATABASE=1`.
+
 In another terminal, run the site against it:
 
 ```bash
@@ -115,11 +117,14 @@ Shoppers don't sign in. Their wishlist and cart live in a signed `snug_shopper` 
 
 | Method | Path | |
 | --- | --- | --- |
-| GET | `/api/shopper` | `{wishlist: [id], cart: [{key, productId, color, size, options, quantity}]}` |
+| GET | `/api/shopper` | `{wishlist: [id], cart: [{key, productId, color, size, options, quantity}], products: {id: {slug, name, priceKES, availability, madeToOrder}}}` (every response below has the same shape) |
+| GET | `/api/shopper/check?ids=p1,p2` | `{products: {...}}`: current price and availability of up to 20 pieces; hidden or deleted ones are left out |
 | PUT / DELETE | `/api/shopper/wishlist/<id>` | Save or remove a piece |
 | POST | `/api/shopper/cart` | Add `{productId, color, size, options, quantity}`; same choices add up |
 | PATCH / DELETE | `/api/shopper/cart/<key>` | Change quantity or remove a line |
 | DELETE | `/api/shopper/cart` | Empty the cart |
+
+`/api/shopper` responses are never cached (`private, no-store`), unlike the storefront routes. The site checks an order against them right before WhatsApp opens, so a price or availability from a cached page is never what gets sent.
 
 Writes need `X-Requested-With: snug-shop` (and an allowed `Origin`), like the admin. Responses are `private, no-store`. Checkout is still WhatsApp: the client's bag page sends the whole cart as one message.
 
@@ -127,15 +132,28 @@ Writes need `X-Requested-With: snug-shop` (and an allowed `Origin`), like the ad
 
 - Passwords are hashed with scrypt. The same message and timing is used for a wrong email and a wrong password.
 - The session is a signed cookie (`HttpOnly`, `SameSite=Lax`, 8 hours idle, 7 days at most). Changing the password (in the admin or with `flask reset-password`) signs out every other browser. Rotate `SECRET_KEY` to sign everyone out.
-- Sign-in attempts are limited per browser: one that has signed in before carries a signed device cookie and has its own limit, so someone hammering the login from a shared proxy address can't lock the owner out.
+- Sign-in attempts are limited per browser: one that has signed in before carries a signed device cookie and has its own limit, so someone hammering the login from a shared proxy address can't lock the owner out. Browsers without that cookie share limits per address (20 failures in 15 minutes) and per account (50), so guesses spread over many addresses still run out. The limits are kept in memory by each gunicorn worker and reset on restart.
+- The admin session cookie is only ever sent on `/api/admin` responses, never on storefront, sitemap or page responses a CDN might cache.
+- Every response forbids framing (`X-Frame-Options: DENY`, `frame-ancestors 'none'`).
+- Outside development the server refuses to start with a `SECRET_KEY` under 32 characters, and it refuses `FLASK_DEBUG=1` on Render.
 - Requests are capped at 64 KB, except photo uploads (40 MB). Photos over 40 megapixels (PNG/WebP) are rejected before decoding; large JPEGs are decoded at reduced size.
 - Every state-changing admin request must carry `X-Requested-With: snug-admin` and, when the browser sends one, a matching `Origin`. Other websites can't send that header.
 - Uploads are fully decoded with Pillow before anything is stored, so the file's real contents are checked, whatever its name or type says. Limits: JPEG, PNG or WebP, 600px wide or more, 10 MB each (Cloudinary's free-plan limit), 12 per product. Only signed-in admins can upload or delete; Cloudinary credentials never leave this server.
 - The public API only returns products marked visible.
 
-## Not built
+## Data protection
 
-- **Database backups and audit logs.** There is no record of who changed what.
+- **Deleting is permanent.** Deleting a product removes its row and its Cloudinary photos (with a CDN purge). Hiding a product is the reversible option. `flask seed` only runs on an empty database and asks before loading sample products outside development.
+- **Development can't touch live photos.** Development uploads go to `snug-co-dev/`, and the server only ever deletes Cloudinary assets in its own mode's folder.
+- **Admins:** `flask list-admins`, `flask create-admin`, `flask reset-password` and `flask delete-admin` (it won't delete the last admin; the deleted admin's browsers are signed out at once).
+- **Backups are not built in.** Supabase's free plan keeps no downloadable backups. Use a paid plan with daily backups, or take a dump yourself, for example before each deploy: `pg_dump "$DATABASE_URL" --format=custom --file=snug-$(date +%F).dump` (restore with `pg_restore --clean --dbname "$DATABASE_URL" snug-<date>.dump`). Turn on Cloudinary's backup if your plan includes it, since deleted photos can't be recovered otherwise.
+- **No audit log.** There is no record of who changed what.
+
+## Supabase: row level security
+
+The browser never talks to Supabase. Only Flask connects, with `DATABASE_URL`, as the owner of the tables. A table is reachable through Supabase's Data API only if the `public` schema (or that table) is exposed there and the `anon` or `authenticated` roles have grants on it; whether that is the case depends on the project's settings, and Supabase's defaults have changed over time. Migration `e5f6a7b8c9d0` turns on row level security for every table, with no public policies, as defense in depth against accidental Data API exposure: if a table is ever exposed, the Data API sees no rows and can change nothing, while Flask (the owner) is unaffected. Any new table needs a migration that does the same; `tests/test_environment.py` fails until it does. Switching off the Data API in the Supabase dashboard (or removing `public` from its exposed schemas) closes the same door.
+
+The old Supabase Storage bucket (`product-photos`) is only read by `flask migrate-images-to-cloudinary`. Once every photo is in Cloudinary, delete the bucket, or check that its policies allow no public uploads or deletes.
 
 ## Layout
 
@@ -147,7 +165,7 @@ Writes need `X-Requested-With: snug-shop` (and an allowed `Origin`), like the ad
 | `app/routes/admin.py` | Product, photo, category and collection endpoints |
 | `app/validation.py` | Input checks, with a message for each field |
 | `app/images.py` | Photo cropping and Cloudinary storage (local disk for development) |
-| `app/cli.py` | `seed`, `create-admin`, `reset-password` |
+| `app/cli.py` | `seed`, `create-admin`, `reset-password`, `list-admins`, `delete-admin` |
 | `app/legacy.py` | Old Supabase Storage photos: `import-bundled-photos`, `migrate-images-to-cloudinary` |
 | `migrations/` | Database migrations |
 | `seed/catalog.json` | Starter catalog loaded by `flask seed` |
@@ -159,7 +177,7 @@ Browser -> Vercel (React site) -> /api rewrite -> https://snug-co-api.onrender.c
 ```
 
 - **Render** runs this server only (`gunicorn wsgi:app`). Run `flask db upgrade` before each deploy (a Render pre-deploy command works).
-- **Supabase** is the PostgreSQL database only, through `DATABASE_URL`. A new database starts empty: no products, categories, shoppers or settings. `flask seed` is optional and is not part of a clean start.
+- **Supabase** is the PostgreSQL database only, through `DATABASE_URL`. A new database starts empty: no products, categories, shoppers or settings. `flask seed` is optional and is not part of a clean start. Connections to Supabase require TLS, and pooled connections are checked before use.
 - **Cloudinary** stores every product photo under `snug-co/products`.
 - **Vercel** serves the site and proxies `/api/*` to Render (`client/vercel.json`), so the browser only talks to the site's own domain and the admin cookie stays first-party.
 
@@ -167,7 +185,7 @@ Environment variables on Render:
 
 | Variable | Value |
 | --- | --- |
-| `SECRET_KEY` | long random value |
+| `SECRET_KEY` | long random value, at least 32 characters (the server won't start otherwise) |
 | `DATABASE_URL` | the Supabase PostgreSQL connection string |
 | `CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY`, `CLOUDINARY_API_SECRET` | from the Cloudinary console |
 | `IMAGE_DELIVERY` | `cloudinary` |
@@ -175,7 +193,7 @@ Environment variables on Render:
 | `TRUSTED_PROXIES` | `1` |
 | `SITE_URL` | the public site address, for the sitemap |
 
-Leave `FLASK_DEBUG` unset. Do not set `UPLOAD_DIR`, `UPLOAD_URL_BASE` or any `SUPABASE_*` variable.
+Leave `FLASK_DEBUG` unset: the server refuses to start with it on Render. Render sets `RENDER` itself, which is what allows the remote `DATABASE_URL` there; on any other host with a remote database, set `ALLOW_REMOTE_DATABASE=1`. Do not set `UPLOAD_DIR`, `UPLOAD_URL_BASE` or any `SUPABASE_*` variable.
 
 After the first deploy, create the first admin from the Render shell (it prompts for the password, which is never stored in git or the environment):
 
