@@ -11,16 +11,19 @@ from .errors import ApiError
 from .extensions import db
 from .models import AdminUser
 
-class StorefrontSessionInterface(SecureCookieSessionInterface):
-    """Never send the admin session cookie on public storefront responses.
+ADMIN_BLUEPRINTS = {"auth", "admin"}
 
-    Flask re-sends a permanent session's cookie on every request. The storefront routes are
-    cached by the CDN, so a signed-in admin's cookie there could be stored and handed to every
-    visitor. Admin and sign-in routes keep the normal behaviour.
+
+class AdminSessionInterface(SecureCookieSessionInterface):
+    """Send the admin session cookie only on admin and sign-in responses.
+
+    Flask re-sends a permanent session's cookie on every request. Storefront routes, the
+    sitemap and the site's pages can be cached by the CDN, so a signed-in admin's cookie there
+    could be stored and handed to every visitor.
     """
 
     def save_session(self, app, session, response):
-        if request.blueprint == "public":
+        if request.blueprint not in ADMIN_BLUEPRINTS:
             return
         super().save_session(app, session, response)
 
@@ -119,7 +122,10 @@ def login_required(fn):
 
 
 class LoginThrottle:
-    """In-memory sign-in rate limit."""
+    """In-memory sign-in rate limit, per gunicorn worker. A restart starts it afresh."""
+
+    # Past this many keys, a failed sign-in first drops keys with no recent failures.
+    SWEEP_AT = 10_000
 
     def __init__(self):
         self._attempts = {}
@@ -127,9 +133,7 @@ class LoginThrottle:
 
     def _recent(self, key, window):
         now = time.monotonic()
-        recent = [t for t in self._attempts.get(key, []) if now - t < window]
-        self._attempts[key] = recent
-        return recent
+        return [t for t in self._attempts.get(key, ()) if now - t < window]
 
     def blocked(self, key, limit, window):
         with self._lock:
@@ -137,7 +141,10 @@ class LoginThrottle:
 
     def fail(self, key, window):
         with self._lock:
-            self._recent(key, window).append(time.monotonic())
+            if len(self._attempts) >= self.SWEEP_AT:
+                for stale in [k for k in self._attempts if not self._recent(k, window)]:
+                    del self._attempts[stale]
+            self._attempts[key] = [*self._recent(key, window), time.monotonic()]
 
     def clear(self, key):
         with self._lock:

@@ -1,6 +1,8 @@
 from pathlib import Path
 
-from conftest import ADMIN_EMAIL, ADMIN_PASSWORD, HEADERS, NEW_PRODUCT, photo
+import pytest
+
+from conftest import ADMIN_EMAIL, ADMIN_PASSWORD, HEADERS, NEW_PRODUCT, PROD_SECRET, photo
 
 
 # ---- Public catalog -------------------------------------------------------
@@ -127,6 +129,80 @@ def test_login_is_throttled_after_repeated_failures(client):
         client.post("/api/admin/login", json={"email": ADMIN_EMAIL, "password": "bad"}, headers=HEADERS)
     res = client.post("/api/admin/login", json={"email": ADMIN_EMAIL, "password": ADMIN_PASSWORD}, headers=HEADERS)
     assert res.status_code == 429
+
+
+def login_from(client, address, password="bad"):
+    return client.post(
+        "/api/admin/login", json={"email": ADMIN_EMAIL, "password": password}, headers=HEADERS,
+        environ_base={"REMOTE_ADDR": address},
+    )
+
+
+def test_guesses_spread_over_many_addresses_still_hit_the_account_limit(app, client):
+    app.config["LOGIN_MAX_ATTEMPTS"] = 2  # account limit: 20 failures
+    for i in range(20):
+        assert login_from(client, f"10.0.0.{i}").status_code == 401
+    assert login_from(client, "10.0.1.1", ADMIN_PASSWORD).status_code == 429
+
+
+def test_a_browser_that_signed_in_before_keeps_its_own_limit(app):
+    app.config["LOGIN_MAX_ATTEMPTS"] = 2
+    owner = app.test_client()
+    assert login_from(owner, "192.0.2.1", ADMIN_PASSWORD).status_code == 200  # gets the device cookie
+    owner.post("/api/admin/logout", headers=HEADERS)
+
+    attacker = app.test_client()
+    for i in range(20):
+        login_from(attacker, f"10.0.0.{i}")
+    assert login_from(attacker, "10.0.1.1", ADMIN_PASSWORD).status_code == 429
+    assert login_from(owner, "192.0.2.1", ADMIN_PASSWORD).status_code == 200
+
+
+def test_throttle_drops_old_keys_once_it_grows(monkeypatch):
+    from app.security import LoginThrottle
+
+    throttle = LoginThrottle()
+    monkeypatch.setattr(LoginThrottle, "SWEEP_AT", 3)
+    clock = [0.0]
+    monkeypatch.setattr("app.security.time.monotonic", lambda: clock[0])
+    for key in ("a", "b", "c"):
+        throttle.fail(key, 60)
+    clock[0] = 120.0
+    throttle.fail("d", 60)
+    assert list(throttle._attempts) == ["d"]
+    assert not throttle.blocked("a", 1, 60) and "a" not in throttle._attempts
+
+
+def test_admin_cookie_is_only_sent_by_admin_routes(admin):
+    for path in ("/sitemap.xml", "/robots.txt", "/api/health", "/api/home", "/api/shopper"):
+        cookies = " ".join(admin.get(path).headers.getlist("Set-Cookie"))
+        assert "snug_admin=" not in cookies, path
+    assert "snug_admin=" in admin.get("/api/admin/me").headers["Set-Cookie"]
+
+
+def test_responses_cannot_be_framed(client):
+    for path in ("/api/home", "/api/admin/me", "/sitemap.xml"):
+        res = client.get(path)
+        assert res.headers["X-Frame-Options"] == "DENY", path
+        assert res.headers["Content-Security-Policy"] == "frame-ancestors 'none'", path
+        assert res.headers["Referrer-Policy"] == "strict-origin-when-cross-origin", path
+
+
+def test_production_refuses_a_short_secret_key(tmp_path):
+    from app import create_app
+
+    with pytest.raises(RuntimeError, match="at least 32 characters"):
+        create_app({"SECRET_KEY": "YOUR_FLASK_SECRET_KEY", "SQLALCHEMY_DATABASE_URI": "sqlite://",
+                    "UPLOAD_DIR": str(tmp_path / "up")})
+
+
+def test_debug_mode_is_refused_on_render(tmp_path, monkeypatch):
+    from app import create_app
+
+    monkeypatch.setenv("RENDER", "true")
+    with pytest.raises(RuntimeError, match="FLASK_DEBUG=1"):
+        create_app({"SECRET_KEY": "dev", "DEBUG": True, "SQLALCHEMY_DATABASE_URI": "sqlite://",
+                    "UPLOAD_DIR": str(tmp_path / "up")})
 
 
 def test_state_changes_need_the_csrf_header(admin):
@@ -390,7 +466,7 @@ def test_site_served_with_spa_fallback(tmp_path):
     from app import create_app
 
     (tmp_path / "index.html").write_text("<html>app</html>")
-    app = create_app({"SECRET_KEY": "x", "SQLALCHEMY_DATABASE_URI": "sqlite://", "CLIENT_DIST": str(tmp_path),
+    app = create_app({"SECRET_KEY": PROD_SECRET, "SQLALCHEMY_DATABASE_URI": "sqlite://", "CLIENT_DIST": str(tmp_path),
                       "UPLOAD_DIR": str(tmp_path / "up")})
     c = app.test_client()
     assert b"app" in c.get("/shop/some-page").data
@@ -486,7 +562,7 @@ def test_cross_origin_admin_gets_cors_and_cross_site_cookie(tmp_path, monkeypatc
     site = "https://shop.example.com"
     monkeypatch.setenv("ALLOWED_ORIGINS", site)
     monkeypatch.setenv("SESSION_COOKIE_SAMESITE", "None")
-    app = create_app({"SECRET_KEY": "x", "SQLALCHEMY_DATABASE_URI": f"sqlite:///{tmp_path / 'c.db'}",
+    app = create_app({"SECRET_KEY": PROD_SECRET, "SQLALCHEMY_DATABASE_URI": f"sqlite:///{tmp_path / 'c.db'}",
                       "UPLOAD_DIR": str(tmp_path / "up")})
     with app.app_context():
         db.create_all()

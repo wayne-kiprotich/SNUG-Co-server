@@ -13,7 +13,7 @@ from app.extensions import db
 from app.images import cloudinary_template, cloudinary_url
 from app.models import Category, ProductImage
 
-from conftest import ADMIN_EMAIL, ADMIN_PASSWORD, HEADERS, NEW_PRODUCT, photo
+from conftest import ADMIN_EMAIL, ADMIN_PASSWORD, HEADERS, NEW_PRODUCT, PROD_SECRET, photo
 
 CLOUD = {"CLOUDINARY_CLOUD_NAME": "snug-test", "CLOUDINARY_API_KEY": "key-123", "CLOUDINARY_API_SECRET": "secret-456"}
 
@@ -397,7 +397,7 @@ def test_production_session_cookie_is_secure(tmp_path):
     from app import create_app
 
     prod = create_app(
-        {"SECRET_KEY": "x", "SQLALCHEMY_DATABASE_URI": f"sqlite:///{tmp_path / 'p.db'}", "UPLOAD_DIR": str(tmp_path / "up"),
+        {"SECRET_KEY": PROD_SECRET, "SQLALCHEMY_DATABASE_URI": f"sqlite:///{tmp_path / 'p.db'}", "UPLOAD_DIR": str(tmp_path / "up"),
          "DEBUG": False, "CLOUDINARY_CLOUD_NAME": "", "CLOUDINARY_API_KEY": "", "CLOUDINARY_API_SECRET": ""}
     )
     assert prod.config["SESSION_COOKIE_SECURE"] is True

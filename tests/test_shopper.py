@@ -4,7 +4,7 @@ import secrets
 
 import pytest
 
-from conftest import ADMIN_EMAIL, ADMIN_PASSWORD, HEADERS, NEW_PRODUCT
+from conftest import ADMIN_EMAIL, ADMIN_PASSWORD, HEADERS, NEW_PRODUCT, PROD_SECRET
 
 SHOP = {"X-Requested-With": "snug-shop"}
 
@@ -187,7 +187,7 @@ def test_production_shopper_cookie_is_secure(tmp_path):
     from app.extensions import db
 
     prod = create_app(
-        {"SECRET_KEY": "x", "SQLALCHEMY_DATABASE_URI": f"sqlite:///{tmp_path / 'p.db'}", "UPLOAD_DIR": str(tmp_path / "up"),
+        {"SECRET_KEY": PROD_SECRET, "SQLALCHEMY_DATABASE_URI": f"sqlite:///{tmp_path / 'p.db'}", "UPLOAD_DIR": str(tmp_path / "up"),
          "CLOUDINARY_CLOUD_NAME": "", "CLOUDINARY_API_KEY": "", "CLOUDINARY_API_SECRET": ""}
     )
     with prod.app_context():

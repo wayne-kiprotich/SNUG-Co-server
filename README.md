@@ -127,7 +127,10 @@ Writes need `X-Requested-With: snug-shop` (and an allowed `Origin`), like the ad
 
 - Passwords are hashed with scrypt. The same message and timing is used for a wrong email and a wrong password.
 - The session is a signed cookie (`HttpOnly`, `SameSite=Lax`, 8 hours idle, 7 days at most). Changing the password (in the admin or with `flask reset-password`) signs out every other browser. Rotate `SECRET_KEY` to sign everyone out.
-- Sign-in attempts are limited per browser: one that has signed in before carries a signed device cookie and has its own limit, so someone hammering the login from a shared proxy address can't lock the owner out.
+- Sign-in attempts are limited per browser: one that has signed in before carries a signed device cookie and has its own limit, so someone hammering the login from a shared proxy address can't lock the owner out. Browsers without that cookie share limits per address (20 failures in 15 minutes) and per account (50), so guesses spread over many addresses still run out. The limits are kept in memory by each gunicorn worker and reset on restart.
+- The admin session cookie is only ever sent on `/api/admin` responses, never on storefront, sitemap or page responses a CDN might cache.
+- Every response forbids framing (`X-Frame-Options: DENY`, `frame-ancestors 'none'`).
+- Outside development the server refuses to start with a `SECRET_KEY` under 32 characters, and it refuses `FLASK_DEBUG=1` on Render.
 - Requests are capped at 64 KB, except photo uploads (40 MB). Photos over 40 megapixels (PNG/WebP) are rejected before decoding; large JPEGs are decoded at reduced size.
 - Every state-changing admin request must carry `X-Requested-With: snug-admin` and, when the browser sends one, a matching `Origin`. Other websites can't send that header.
 - Uploads are fully decoded with Pillow before anything is stored, so the file's real contents are checked, whatever its name or type says. Limits: JPEG, PNG or WebP, 600px wide or more, 10 MB each (Cloudinary's free-plan limit), 12 per product. Only signed-in admins can upload or delete; Cloudinary credentials never leave this server.
@@ -167,7 +170,7 @@ Environment variables on Render:
 
 | Variable | Value |
 | --- | --- |
-| `SECRET_KEY` | long random value |
+| `SECRET_KEY` | long random value, at least 32 characters (the server won't start otherwise) |
 | `DATABASE_URL` | the Supabase PostgreSQL connection string |
 | `CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY`, `CLOUDINARY_API_SECRET` | from the Cloudinary console |
 | `IMAGE_DELIVERY` | `cloudinary` |
@@ -175,7 +178,7 @@ Environment variables on Render:
 | `TRUSTED_PROXIES` | `1` |
 | `SITE_URL` | the public site address, for the sitemap |
 
-Leave `FLASK_DEBUG` unset. Do not set `UPLOAD_DIR`, `UPLOAD_URL_BASE` or any `SUPABASE_*` variable.
+Leave `FLASK_DEBUG` unset: the server refuses to start with it on Render. Do not set `UPLOAD_DIR`, `UPLOAD_URL_BASE` or any `SUPABASE_*` variable.
 
 After the first deploy, create the first admin from the Render shell (it prompts for the password, which is never stored in git or the environment):
 

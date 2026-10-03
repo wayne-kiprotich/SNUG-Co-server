@@ -13,6 +13,8 @@ bp = Blueprint("auth", __name__, url_prefix="/api/admin")
 # Same timing for unknown email and wrong password.
 _DUMMY_HASH = generate_password_hash("not-a-real-password")
 MIN_PASSWORD = 12
+# Failed sign-ins from unknown browsers, per account and window, as a multiple of LOGIN_MAX_ATTEMPTS.
+ACCOUNT_LIMIT_FACTOR = 10
 
 
 def check_new_password(password):
@@ -30,23 +32,25 @@ def login():
     cfg = current_app.config
     limit, window = cfg["LOGIN_MAX_ATTEMPTS"], cfg["LOGIN_WINDOW_SECONDS"]
     # Known browsers get their own limit, so others on a shared proxy IP can't lock them out.
+    # Unknown browsers also share one limit per account, so guesses spread over many
+    # addresses still run out.
     device = device_id()
     if device:
         keys = [("device", device, email)]
+        shared = []
     else:
         keys = [(request.remote_addr, email)]
-        if login_throttle.blocked((request.remote_addr, "*"), limit * 4, window):
-            raise ApiError(429, "Too many attempts. Wait 15 minutes and try again.")
-    if any(login_throttle.blocked(k, limit, window) for k in keys):
+        shared = [((request.remote_addr, "*"), limit * 4), (("account", email), limit * ACCOUNT_LIMIT_FACTOR)]
+    if any(login_throttle.blocked(k, n, window) for k, n in shared) or any(
+        login_throttle.blocked(k, limit, window) for k in keys
+    ):
         raise ApiError(429, "Too many attempts. Wait 15 minutes and try again.")
 
     user = AdminUser.query.filter_by(email=email).first() if email else None
     valid = check_password_hash(user.password_hash if user else _DUMMY_HASH, password if isinstance(password, str) else "")
     if not (user and valid):
-        for k in keys:
+        for k in keys + [k for k, _ in shared]:
             login_throttle.fail(k, window)
-        if not device:
-            login_throttle.fail((request.remote_addr, "*"), window)
         raise ApiError(401, "Email or password is incorrect.")
 
     for k in keys:
