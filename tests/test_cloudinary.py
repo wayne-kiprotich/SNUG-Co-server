@@ -416,3 +416,22 @@ def test_production_session_cookie_is_secure(tmp_path):
     cookie = next(c for c in res.headers.getlist("Set-Cookie") if c.startswith("snug_admin="))
     assert "Secure" in cookie and "HttpOnly" in cookie and "SameSite=Lax" in cookie
     assert "Expires=" in cookie  # 8-hour session, not a forever cookie
+
+
+def test_development_never_deletes_live_photos(app, cloud_admin, fake_cloud):
+    # A live photo, then the same database used by a development server with the live keys
+    # (a restored backup, say).
+    pid = new_product(cloud_admin)
+    res = cloud_admin.post(f"/api/admin/products/{pid}/images", data={"files": (photo(), "1.jpg")}, headers=HEADERS)
+    live = res.get_json()["product"]["images"][0]["id"]
+    app.config["CLOUDINARY_FOLDER"] = "snug-co-dev"
+
+    cloud_admin.delete(f"/api/admin/products/{pid}/images/{live}", headers=HEADERS)
+    assert fake_cloud.destroyed == []
+    assert f"snug-co/products/{live}" in fake_cloud.assets
+
+    res = cloud_admin.post(f"/api/admin/products/{pid}/images", data={"files": (photo(), "2.jpg")}, headers=HEADERS)
+    dev = res.get_json()["product"]["images"][0]["id"]
+    assert fake_cloud.uploads[-1]["folder"] == "snug-co-dev/products"
+    cloud_admin.delete(f"/api/admin/products/{pid}/images/{dev}", headers=HEADERS)
+    assert [d[0] for d in fake_cloud.destroyed] == [f"snug-co-dev/products/{dev}"]

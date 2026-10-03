@@ -9,7 +9,7 @@ from sqlalchemy.engine import Engine
 from werkzeug.middleware.proxy_fix import ProxyFix
 
 from .cli import register_cli
-from .config import BASE_DIR, build_config
+from .config import BASE_DIR, build_config, remote_database_host
 from .errors import register_errors
 from .extensions import db, migrate
 from .routes import admin, auth, public, shopper
@@ -45,6 +45,14 @@ def create_app(test_config=None):
         )
     if app.debug and os.environ.get("RENDER"):
         raise RuntimeError("FLASK_DEBUG=1 is for local development only. Remove it from Render's environment.")
+    # Render sets RENDER. Anywhere else, a database on another machine is most likely the live
+    # one, so it needs an explicit opt-in for each run.
+    remote_host = remote_database_host(app.config["SQLALCHEMY_DATABASE_URI"])
+    if remote_host and not (os.environ.get("RENDER") or os.environ.get("ALLOW_REMOTE_DATABASE") == "1"):
+        raise RuntimeError(
+            f"DATABASE_URL points at {remote_host}, which may be the live database. Leave DATABASE_URL "
+            "empty to use local SQLite, or run with ALLOW_REMOTE_DATABASE=1 if you really mean to use it."
+        )
     if app.config["TRUSTED_PROXIES"]:
         n = app.config["TRUSTED_PROXIES"]
         app.wsgi_app = ProxyFix(app.wsgi_app, x_for=n, x_proto=n, x_host=n)
