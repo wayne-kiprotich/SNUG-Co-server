@@ -146,7 +146,7 @@ def register_legacy_cli(app):
         """Copy every photo into Cloudinary. Safe to re-run; deletes nothing."""
         from flask import current_app
 
-        from .images import PRODUCT_FOLDER, check_delivery, cloudinary_storage, cloudinary_url
+        from .images import check_delivery, cloudinary_storage, cloudinary_url, product_folder
 
         cloud = cloudinary_storage(current_app)
         if cloud is None:
@@ -177,7 +177,7 @@ def register_legacy_cli(app):
                 click.echo(f"would copy {image.id} ({width}x{height}) from {source}")
                 continue
             try:
-                asset = cloud.upload(source, PRODUCT_FOLDER, image.id)
+                asset = cloud.upload(source, product_folder(current_app), image.id)
             except ApiError as err:
                 click.echo(f"FAILED {image.id}: {err.message}")
                 failed += 1

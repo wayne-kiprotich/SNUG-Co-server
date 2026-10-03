@@ -71,6 +71,9 @@ def register_cli(app):
         """Load the starter catalog into an empty database."""
         if Product.query.first() or Category.query.first():
             raise click.ClickException("The database already has a catalog. Seeding was skipped.")
+        if not app.debug:
+            # The sample catalog has placeholder prices and names; it shouldn't reach a live shop by accident.
+            click.confirm("This is not a development database. Load the sample catalog into it anyway?", abort=True)
         count = load_catalog(json.loads(Path(path).read_text()))
         click.echo(f"Loaded {count} products.")
 
@@ -104,5 +107,27 @@ def register_cli(app):
         user.session_version += 1
         db.session.commit()
         click.echo("Password updated.")
+
+    @app.cli.command("list-admins")
+    def list_admins():
+        """Show every admin account."""
+        for user in AdminUser.query.order_by(AdminUser.id).all():
+            last = user.last_login_at.strftime("%Y-%m-%d %H:%M") if user.last_login_at else "never"
+            click.echo(f"{user.email}  (created {user.created_at:%Y-%m-%d}, last sign-in {last})")
+
+    @app.cli.command("delete-admin")
+    @click.option("--email", prompt=True)
+    def delete_admin(email):
+        """Delete an admin account. Its browsers are signed out at once."""
+        user = AdminUser.query.filter_by(email=email.strip().lower()).first()
+        if user is None:
+            raise click.ClickException("No admin has that email.")
+        if AdminUser.query.count() == 1:
+            raise click.ClickException("That is the only admin. Create another one first.")
+        email = user.email
+        click.confirm(f"Delete the admin {email}?", abort=True)
+        db.session.delete(user)
+        db.session.commit()
+        click.echo(f"Deleted admin {email}.")
 
     register_legacy_cli(app)

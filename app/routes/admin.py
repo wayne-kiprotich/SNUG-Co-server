@@ -5,7 +5,16 @@ from sqlalchemy import func
 
 from ..errors import ApiError, ValidationError
 from ..extensions import db
-from ..images import PRODUCT_FOLDER, cloudinary_storage, crop_box, local_storage, new_image_id, open_image, process_image
+from ..images import (
+    cloudinary_storage,
+    crop_box,
+    local_storage,
+    new_image_id,
+    open_image,
+    owned_by,
+    process_image,
+    product_folder,
+)
 from ..models import Category, Collection, Product, ProductImage, SiteSettings, with_relations
 from ..security import login_required
 from ..serializers import SETTINGS_IMAGES, image_registry, product_json, settings_json, taxonomy_json
@@ -126,6 +135,8 @@ def remove_stored_files(photos):
         for public_id in sorted(public_ids - in_use):
             if cloud is None:
                 current_app.logger.warning("Cloudinary isn’t configured; %s was not deleted.", public_id)
+            elif not owned_by(current_app, public_id):
+                current_app.logger.warning("%s is outside this server's Cloudinary folder; it was not deleted.", public_id)
             else:
                 cloud.destroy(public_id)
     storage = local_storage(current_app) if cloud is None else None
@@ -300,7 +311,7 @@ def save_to_cloudinary(cloud, product, prepared, position):
     try:
         for data, (x, y, w, h) in prepared:
             image_id = new_image_id()
-            asset = cloud.upload(data, PRODUCT_FOLDER, image_id)
+            asset = cloud.upload(data, product_folder(current_app), image_id)
             uploaded.append(asset["public_id"])
             db.session.add(
                 ProductImage(

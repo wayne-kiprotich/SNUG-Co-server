@@ -2,7 +2,10 @@ import os
 from datetime import timedelta
 from pathlib import Path
 
+from sqlalchemy.engine import make_url
+
 BASE_DIR = Path(__file__).resolve().parent.parent
+LOCAL_DB_HOSTS = {"", "localhost", "127.0.0.1", "::1"}
 
 
 def _database_uri(url):
@@ -14,6 +17,26 @@ def _database_uri(url):
         if url.startswith(prefix):
             return "postgresql+psycopg://" + url[len(prefix):]
     return url
+
+
+def remote_database_host(uri):
+    """The host of a database on another machine, or None for SQLite and local servers."""
+    url = make_url(uri)
+    if url.get_backend_name() == "sqlite" or (url.host or "") in LOCAL_DB_HOSTS:
+        return None
+    return url.host
+
+
+def engine_options(uri):
+    url = make_url(uri)
+    if url.get_backend_name() != "postgresql":
+        return {}
+    connect_args = {"connect_timeout": 10}
+    # Supabase is reached over the internet: require TLS instead of psycopg's "prefer".
+    if (url.host or "").endswith((".supabase.com", ".supabase.co")) and "sslmode" not in url.query:
+        connect_args["sslmode"] = "require"
+    # Check a pooled connection before use, so one the pooler closed while idle doesn't fail a request.
+    return {"pool_pre_ping": True, "pool_recycle": 300, "connect_args": connect_args}
 
 
 def build_config(overrides=None):
@@ -41,6 +64,9 @@ def build_config(overrides=None):
         "CLOUDINARY_CLOUD_NAME": env("CLOUDINARY_CLOUD_NAME") or "",
         "CLOUDINARY_API_KEY": env("CLOUDINARY_API_KEY") or "",
         "CLOUDINARY_API_SECRET": env("CLOUDINARY_API_SECRET") or "",
+        # Development uploads go to their own folder, and photos are only ever deleted from the
+        # running mode's folder, so a local run with the live keys can't touch live photos.
+        "CLOUDINARY_FOLDER": "snug-co-dev" if debug else "snug-co",
         # "legacy" serves photos stored before Cloudinary (local files, bundled files) again.
         "IMAGE_DELIVERY": (env("IMAGE_DELIVERY") or "cloudinary").lower(),
         # Photo uploads raise this to MAX_UPLOAD_REQUEST_BYTES.
@@ -63,4 +89,5 @@ def build_config(overrides=None):
     }
     if overrides:
         config.update(overrides)
+    config.setdefault("SQLALCHEMY_ENGINE_OPTIONS", engine_options(config["SQLALCHEMY_DATABASE_URI"]))
     return config
