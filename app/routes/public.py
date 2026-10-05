@@ -1,4 +1,6 @@
-from flask import Blueprint, jsonify
+from flask import Blueprint, current_app, jsonify
+from sqlalchemy import text
+from sqlalchemy.exc import SQLAlchemyError
 
 from ..errors import ApiError
 from ..extensions import db
@@ -39,7 +41,28 @@ def _loaded_images(products):
 
 @bp.get("/health")
 def health():
+    """Liveness: the process answers. Doesn't touch the database, so a database outage doesn't
+    restart the web process."""
     return jsonify({"status": "ok"})
+
+
+@bp.get("/ready")
+def ready():
+    """Readiness: the database answers a trivial query, so the app can serve real traffic. Cloudinary
+    isn't checked here (a check would need an upload or a paid call); see the server README.
+    Never cached, and the error text is generic so no internal detail leaks."""
+    try:
+        db.session.execute(text("SELECT 1"))
+    except SQLAlchemyError:
+        db.session.rollback()
+        current_app.logger.exception("Readiness check failed: database did not answer")
+        response = jsonify({"status": "unavailable", "database": "unavailable"})
+        status = 503
+    else:
+        response = jsonify({"status": "ready", "database": "ok"})
+        status = 200
+    response.headers["Cache-Control"] = "no-store"
+    return response, status
 
 
 @bp.get("/settings")
